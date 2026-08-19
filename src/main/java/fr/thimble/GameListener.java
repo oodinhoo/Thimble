@@ -76,6 +76,10 @@ final class GameListener implements Listener {
         if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) {
             return;
         }
+        if (plugin.handleWandClick(event.getPlayer())) {
+            event.setCancelled(true);
+            return;
+        }
         Arena arena = plugin.arenaOf(event.getPlayer());
         if (arena != null) {
             event.setCancelled(true);

@@ -75,6 +75,7 @@ help:
     <dark_gray>-</dark_gray> <white>/th leave</white> <gray>: quitter la partie ou l'observation</gray>
     <dark_gray>-</dark_gray> <white>/th list</white> <gray>: lister les arenes</gray>
   admin: |-
+    <dark_gray>-</dark_gray> <white>/th admin wand <arene></white> <gray>: configuration guidee en 4 clics</gray>
     <dark_gray>-</dark_gray> <white>/th admin create|delete <arene></white>
     <dark_gray>-</dark_gray> <white>/th admin setwait|setjump|setspectator <arene></white> <gray>(a ta position)</gray>
     <dark_gray>-</dark_gray> <white>/th admin pos1|pos2 <arene></white> <gray>: coins de la piscine</gray>
@@ -123,3 +124,12 @@ scoreboard:
   water: "<aqua>Eau restante : <white><water></white></aqua>"
   waiting: "<gray>Joueurs : <white><players></white>/<white><min></white></gray>"
   countdown: "<yellow>Debut dans <white><time></white>s</yellow>"
+
+setup:
+  wand-name: "<gold><bold>Baguette de a coudre</bold></gold>"
+  started: "<green>Configuration de <white><arena></white> : clic droit avec la baguette, 4 fois.</green>"
+  step-pos1: "<yellow>1/4</yellow> <gray>Vise <white>l'eau</white> a un coin de la piscine et fais un clic droit.</gray>"
+  step-pos2: "<yellow>2/4</yellow> <gray>Vise <white>l'eau</white> au coin oppose.</gray>"
+  step-setjump: "<yellow>3/4</yellow> <gray>Vise le bloc du <white>plongeoir</white> (tu y seras teleporte).</gray>"
+  step-gradins: "<yellow>4/4</yellow> <gray>Vise le bloc des <white>gradins</white> (attente et retour apres saut).</gray>"
+  done: "<green><bold>Arene <arena> prete et activee !</bold></green> <gray><water> cases d'eau detectees.</gray>"

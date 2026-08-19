@@ -460,3 +460,15 @@ en fin de partie.
 
 Ecart restant : la trainee de particules n'est pas a la couleur du joueur (il faudrait une table
 bloc -> couleur qui suivrait toute palette personnalisee) ; elle utilise `END_ROD`.
+
+### 13.3 Baguette de configuration
+
+`/th admin wand <arene>` remplace la sequence de commandes de placement : le plugin remet une
+baguette et guide quatre clics droits (coin 1, coin 2, plongeoir, gradins). La cible est resolue
+par lancer de rayon serveur avec `FluidCollisionMode.ALWAYS`, seul moyen de designer une case
+d'eau : le client ne genere aucun clic sur un bloc non solide. L'arene est creee si besoin et
+activee au dernier clic si `Arena#missing()` est vide.
+
+Les gradins fixent d'un seul geste le lobby d'attente et le point de retour, qui sont le meme
+endroit dans la quasi-totalite des arenes ; `/th admin setwait` et `setspectator` permettent
+toujours de les separer.

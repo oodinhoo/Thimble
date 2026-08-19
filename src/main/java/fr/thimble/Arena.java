@@ -9,7 +9,6 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
-import org.bukkit.FluidCollisionMode;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -20,7 +19,6 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.util.RayTraceResult;
 
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
@@ -538,9 +536,7 @@ final class Arena {
         if (bonusPicker == null || !bonusPicker.equals(player.getUniqueId())) {
             return;
         }
-        RayTraceResult trace = world().rayTraceBlocks(player.getEyeLocation(),
-                player.getEyeLocation().getDirection(), 60, FluidCollisionMode.ALWAYS, true);
-        Block target = trace == null ? null : trace.getHitBlock();
+        Block target = ThimblePlugin.targetBlock(player);
         if (target == null || target.getType() != Material.WATER
                 || target.getY() != surfaceY() || !inPool(target.getX(), target.getZ())) {
             plugin.send(player, "game.bonus-invalid");

@@ -34,30 +34,46 @@ aucun avertissement). Déposer le jar dans `plugins/` d'un serveur **Paper 26.2*
 Seule la couche de surface compte : c'est là que les blocs se posent. Les couches du dessous
 restent en eau pour amortir la chute.
 
-### 2. Déclarer l'arène
-
-En jeu, en te plaçant à chaque endroit avant de taper la commande :
+### 2. Déclarer l'arène — la baguette
 
 ```
-/th admin create piscine1
-/th admin setwait piscine1          # debout au lobby d'attente
-/th admin setjump piscine1          # debout sur le plongeoir
-/th admin setspectator piscine1     # debout au point de retour, face à la piscine
-/th admin pos1 piscine1             # dans l'eau, à un coin, au niveau de la surface
-/th admin pos2 piscine1             # au coin opposé, au fond de la piscine
-/th admin enable piscine1
+/th admin wand piscine1
 ```
 
-`pos1` et `pos2` sont les deux coins opposés de la piscine. La **surface de jeu** est le Y le plus
-haut des deux ; `/th admin setsurface piscine1 [y]` permet de le forcer.
+Tu reçois une **baguette** (bâton de blaze) et quatre clics droits suffisent, dans l'ordre :
 
-### 3. Vérifier
+| Clic | Sur quoi viser |
+|---|---|
+| 1/4 | **l'eau**, à un coin de la piscine |
+| 2/4 | **l'eau**, au coin opposé |
+| 3/4 | le bloc du **plongeoir** (tu y seras téléporté à ton tour) |
+| 4/4 | le bloc des **gradins** (attente avant la partie et retour après chaque saut) |
 
-`/th admin info piscine1` affiche l'état, les réglages, le nombre de cases d'eau détectées et la
-liste de ce qui manque encore. Si `eau=0`, la surface est mal placée.
+Pas besoin de te déplacer : la case visée est calculée par lancer de rayon côté serveur, l'eau
+comprise — le client, lui, ne permet jamais de cliquer sur de l'eau. L'arène est créée si elle
+n'existe pas, puis **activée automatiquement** au dernier clic si tout est cohérent ; sinon le
+plugin dit ce qui manque.
 
-Réglages : `/th admin set <arène> <min|max|lives|timeout> <valeur>` et
-`/th admin palette <arène> <add|remove|clear|list> [bloc]`.
+### 3. Réglage fin (facultatif)
+
+Chaque point reste modifiable à la commande, en te plaçant à l'endroit voulu :
+
+```
+/th admin setwait|setjump|setspectator piscine1
+/th admin pos1|pos2 piscine1
+/th admin setsurface piscine1 [y]
+/th admin set piscine1 <min|max|lives|timeout> <valeur>
+/th admin palette piscine1 <add|remove|clear|list> [bloc]
+```
+
+La baguette pose un seul point pour l'attente et le retour ; ces commandes permettent de les
+séparer. La **surface de jeu** est le Y le plus haut des deux coins.
+
+### 4. Vérifier
+
+`/th admin info piscine1` affiche l'état, les réglages, le nombre de cases d'eau détectées et ce
+qui manque encore. Une 7×7 correctement posée affiche `eau=49`. Si `eau=0`, la surface est mal
+placée.
 
 ### Pièges courants
 

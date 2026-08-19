@@ -4,17 +4,24 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
+import org.bukkit.FluidCollisionMode;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.util.RayTraceResult;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -162,6 +169,81 @@ public final class ThimblePlugin extends JavaPlugin {
 
     Hud hud() {
         return hud;
+    }
+
+    // ------------------------------------------------------------------
+    //  Baguette de configuration
+    // ------------------------------------------------------------------
+
+    /** Une configuration d'arene en cours : l'arene visee et l'etape suivante. */
+    private record Setup(String arena, int step) { }
+
+    private static final List<String> SETUP_STEPS = List.of("pos1", "pos2", "setjump", "gradins");
+
+    private final Map<UUID, Setup> setups = new HashMap<>();
+
+    /**
+     * Le bloc vise par le joueur, fluides compris : l'eau n'etant pas solide, le client
+     * n'envoie jamais de clic dessus, c'est au serveur de la trouver.
+     */
+    static Block targetBlock(Player player) {
+        RayTraceResult trace = player.getWorld().rayTraceBlocks(player.getEyeLocation(),
+                player.getEyeLocation().getDirection(), 60, FluidCollisionMode.ALWAYS, true);
+        return trace == null ? null : trace.getHitBlock();
+    }
+
+    void startSetup(Player player, Arena arena) {
+        setups.put(player.getUniqueId(), new Setup(arena.id(), 0));
+        ItemStack wand = new ItemStack(Material.BLAZE_ROD);
+        wand.editMeta(meta -> meta.displayName(message("setup.wand-name")));
+        player.getInventory().addItem(wand);
+        send(player, "setup.started", "arena", arena.id());
+        send(player, "setup.step-" + SETUP_STEPS.get(0));
+    }
+
+    /** @return true si le clic droit a servi a configurer une arene. */
+    boolean handleWandClick(Player player) {
+        Setup setup = setups.get(player.getUniqueId());
+        if (setup == null || player.getInventory().getItemInMainHand().getType() != Material.BLAZE_ROD) {
+            return false;
+        }
+        Arena arena = arena(setup.arena());
+        Block target = targetBlock(player);
+        if (arena == null || target == null) {
+            setups.remove(player.getUniqueId());
+            return false;
+        }
+        Location spot = target.getLocation().add(0.5, 1, 0.5);
+        spot.setYaw(player.getLocation().getYaw());
+        String step = SETUP_STEPS.get(setup.step());
+        switch (step) {
+            case "pos1", "pos2" -> arena.setLocation(step, target.getLocation());
+            case "setjump" -> arena.setLocation("setjump", spot);
+            // Les gradins servent a la fois de lobby d'attente et de point de retour.
+            case "gradins" -> {
+                arena.setLocation("setwait", spot);
+                arena.setLocation("setspectator", spot);
+            }
+            default -> { }
+        }
+        saveArenas();
+        int next = setup.step() + 1;
+        if (next < SETUP_STEPS.size()) {
+            setups.put(player.getUniqueId(), new Setup(setup.arena(), next));
+            send(player, "setup.step-" + SETUP_STEPS.get(next));
+            return true;
+        }
+        setups.remove(player.getUniqueId());
+        player.getInventory().setItemInMainHand(null);
+        List<String> missing = arena.missing();
+        if (missing.isEmpty()) {
+            arena.setEnabled(true);
+            saveArenas();
+            send(player, "setup.done", "arena", arena.id(), "water", String.valueOf(arena.waterLeft()));
+        } else {
+            send(player, "arena.incomplete", "missing", String.join(", ", missing));
+        }
+        return true;
     }
 
     List<Material> defaultPalette() {
