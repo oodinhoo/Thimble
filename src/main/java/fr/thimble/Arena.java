@@ -302,7 +302,8 @@ final class Arena {
         }
         Location location = player.getLocation();
         if (!falling) {
-            if (player.isOnGround()) {
+            // Le saut ne commence que lorsque le joueur a vraiment quitte le plongeoir.
+            if (location.getY() > jump.getY() - 1.0) {
                 return;
             }
             falling = true;
@@ -317,9 +318,22 @@ final class Arena {
                 return;
             }
         }
-        if (player.isOnGround() || location.getY() < floorY() - 5 || location.getY() < world().getMinHeight() + 1) {
+        if (onSolidGround(location) || location.getY() < floorY() - 5
+                || location.getY() < world().getMinHeight() + 1) {
             miss("game.miss");
         }
+    }
+
+    /**
+     * Atterrissage sur un bloc, verifie cote serveur : {@code Player#isOnGround()} est
+     * renseigne par le client, donc falsifiable.
+     */
+    private boolean onSolidGround(Location location) {
+        if (location.getY() - location.getBlockY() > 0.01) {
+            return false;
+        }
+        return world().getBlockAt(location.getBlockX(), location.getBlockY() - 1, location.getBlockZ())
+                .getType().isSolid();
     }
 
     boolean frozen(Player player) {

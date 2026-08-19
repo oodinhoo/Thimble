@@ -8,13 +8,16 @@ Le dernier joueur en vie gagne.
 
 ## Compilation
 
-Requiert **JDK 25** (Minecraft 26.1+ l'impose).
+Requiert **JDK 25** (Minecraft 26.1+ l'impose). Un Corretto 25 est installé dans
+`C:\Users\AlexandreODIN\tools\jdk25.0.4_8`.
 
-```bash
-./gradlew build      # -> build/libs/Thimble-0.1.0.jar
+```powershell
+$env:JAVA_HOME = "C:\Users\AlexandreODIN\tools\jdk25.0.4_8"
+.\gradlew.bat build      # -> build/libs/Thimble-0.1.0.jar
 ```
 
-Déposer le jar dans `plugins/` d'un serveur **Paper 26.2**.
+Compilé et vérifié contre `io.papermc.paper:paper-api:26.2.build.112-stable` (Gradle 9.7.1,
+aucun avertissement). Déposer le jar dans `plugins/` d'un serveur **Paper 26.2**.
 
 ## Créer une arène
 

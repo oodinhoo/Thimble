@@ -95,38 +95,40 @@ rapporte un **bonus configurable** :
 
 ## 2. Cible technique
 
-| Élément | Choix |
-|---|---|
-| Serveur | **PaperMC 26.2** (`io.papermc.paper:paper-api:26.2.build.+`, dépôt `https://repo.papermc.io/repository/maven-public/`) |
-| Java | **JDK 25** (obligatoire depuis Minecraft 26.1) |
-| Build | Gradle (Kotlin DSL) + `com.gradleup.shadow` pour les libs embarquées |
-| Manifeste | `paper-plugin.yml` avec `api-version: '26.2'` (un `plugin.yml` legacy peut cohabiter) |
-| Texte | Adventure / **MiniMessage** (fourni par Paper) — aucune couleur `§` en dur |
-| Commandes | API Brigadier de Paper (`LifecycleEvents.COMMANDS`) |
-| Dépendances optionnelles | WorldEdit (sélection de région), PlaceholderAPI (placeholders), Vault (récompenses économiques) |
-| Libs embarquées | HikariCP + driver SQLite/MySQL (uniquement si stockage SQL activé) |
+| Élément | Choix | Vérifié |
+|---|---|---|
+| Serveur | **PaperMC 26.2** (`io.papermc.paper:paper-api:26.2.build.+`, dépôt `https://repo.papermc.io/repository/maven-public/`) | résolu en `26.2.build.112-stable` |
+| Java | **JDK 25** (obligatoire depuis Minecraft 26.1) | compilé avec Corretto 25.0.4 |
+| Build | Gradle (Kotlin DSL) + wrapper ; `com.gradleup.shadow` seulement quand des libs devront être embarquées (lot 3) | Gradle 9.7.1, `BUILD SUCCESSFUL`, 0 avertissement |
+| Manifeste | `plugin.yml` avec `api-version: '26.2'` — le chargement Bukkit historique reste supporté en 26.2 ; migration `paper-plugin.yml` possible plus tard | jar vérifié |
+| Texte | Adventure / **MiniMessage** (fourni par Paper) — aucune couleur `§` en dur | compile |
+| Commandes | `CommandExecutor` + `TabCompleter` déclarés dans `plugin.yml` ; Brigadier (`LifecycleEvents.COMMANDS`) au lot 2 si besoin de vrais types d'arguments | compile |
+| Dépendances optionnelles | WorldEdit (sélection de région), PlaceholderAPI (placeholders), Vault (récompenses économiques) | lots 3-4 |
+| Libs embarquées | HikariCP + driver SQLite/MySQL (uniquement si stockage SQL activé) | lot 3 |
+
+> Compatibilité confirmée par la compilation : `paper-api:26.2.build.112-stable` sous JDK 25,
+> aucune API dépréciée utilisée. Le jar produit (`build/libs/Thimble-0.1.0.jar`) embarque
+> `plugin.yml` (`api-version: '26.2'`), `config.yml` et `messages.yml`.
 
 ### 2.1 Arborescence du projet
 
+Structure réelle du lot 1 — un package plat, cinq classes. Le découpage en sous-packages
+(`arena/`, `game/`, `storage/`, `ui/`…) ne sera introduit que quand les lots 2 et 3 le rendront
+nécessaire.
+
 ```
 Thimble/
-├── build.gradle.kts
-├── settings.gradle.kts
+├── build.gradle.kts · settings.gradle.kts · gradlew(.bat)
 ├── docs/SPECIFICATIONS.md
 └── src/main/
     ├── java/fr/thimble/
-    │   ├── ThimblePlugin.java            # cycle de vie, wiring
-    │   ├── arena/                        # Arena, ArenaManager, ArenaState, PoolRegion, PoolSnapshot
-    │   ├── game/                         # Game, GameLoop, TurnController, JumpResolver, RoundOrder
-    │   ├── player/                       # ThimblePlayer, PlayerSnapshot, ColorPalette
-    │   ├── listener/                     # JumpListener, ProtectionListener, ConnectionListener
-    │   ├── command/                      # ThimbleCommand, AdminCommand, argument types
-    │   ├── config/                       # ConfigService, MessageService, ArenaSerializer
-    │   ├── storage/                      # StatsRepository (Yaml/Sqlite/MySql), StatsCache
-    │   ├── integration/                  # WorldEditAdapter, ThimbleExpansion (PAPI)
-    │   └── ui/                           # ScoreboardService, BossBarService, SoundService
+    │   ├── ThimblePlugin.java     # cycle de vie, arènes YAML, config, messages, boucle de tick
+    │   ├── Arena.java             # config d'arène + partie : états, tours, sauts, piscine
+    │   ├── ThimbleCommand.java    # /th et /th admin, avec complétion
+    │   ├── GameListener.java      # atterrissage, protections, déconnexion
+    │   └── PlayerSnapshot.java    # sauvegarde/restauration de l'état du joueur
     └── resources/
-        ├── paper-plugin.yml
+        ├── plugin.yml
         ├── config.yml
         └── messages.yml
 ```
@@ -197,12 +199,15 @@ TURN_NEXT     → joueur suivant, ou fin de manche
 Écoute de `PlayerMoveEvent` (filtrée sur le seul sauteur actif, comparaison de blocs et non de
 positions pour éviter le coût) :
 
-- si le bloc à la position des pieds est `Material.WATER` **et** que ces coordonnées sont dans
-  `pool` **et** que `y == pool.surfaceY` → **succès** ;
-- sinon, si `player.isOnGround()` sur un bloc non-eau, ou si un `EntityDamageEvent`
-  `DamageCause.FALL` est reçu → **échec** ;
-- l'événement `EntityDamageEvent` de type `FALL` est **annulé** dans tous les cas (le plugin gère
-  lui-même les vies) ; le joueur n'est jamais réellement tué.
+- le saut ne commence qu'une fois le joueur descendu sous le plongeoir (marge d'un bloc) ;
+- si la colonne des pieds est dans `pool` et que le bloc `(x, pool.surfaceY, z)` est
+  `Material.WATER` → **succès** ;
+- sinon, atterrissage sur un bloc → **échec**. Le test est fait **côté serveur** (bloc solide
+  sous les pieds + joueur pile à la limite du bloc) : `Player#isOnGround()` est déprécié car
+  renseigné par le client, donc falsifiable ;
+- chute dans le vide (sous le fond de la piscine, ou sous la hauteur minimale du monde) → **échec** ;
+- tous les `EntityDamageEvent` des joueurs en partie sont **annulés** (le plugin gère lui-même
+  les vies) ; le joueur n'est jamais réellement tué.
 
 ### 5.2 Pose du bloc
 
@@ -424,9 +429,19 @@ Ecarts assumes par rapport aux sections ci-dessus, a lever aux lots suivants :
 
 | Ecart | Raison | A faire |
 |---|---|---|
-| Commandes Bukkit classiques (`plugin.yml`) au lieu de Brigadier | API stable, verifiable sans compilation | migration Brigadier au lot 2 si besoin |
+| Commandes Bukkit classiques (`plugin.yml`) au lieu de Brigadier | chargement Bukkit toujours supporte en 26.2, API stable | migration Brigadier au lot 2 si besoin de vrais types d'arguments |
 | Bonus du de a coudre : case **tiree au sort** au lieu de choisie | selectionner une case demande une UI fiable | selecteur au lot 2 (`ponytail:` dans `Arena#hit`) |
 | Restauration de la piscine synchrone | une piscine fait au plus quelques centaines de blocs | lots par tick si des arenes geantes apparaissent |
 | Pas de snapshot persiste sur disque | evite un format de fichier de plus | a ajouter si des crashs laissent des arenes sales |
 | Pas de statistiques, ni scoreboard, ni spectateurs | lot 1 volontairement nu | lots 2 et 3 |
 | Region definie par `pos1`/`pos2` (position du joueur) | pas de dependance WorldEdit | adaptateur WorldEdit au lot 4 |
+
+### 13.1 Verification de compatibilite (2026-08-19)
+
+`gradlew build` sous **JDK 25 (Corretto 25.0.4)** avec **Gradle 9.7.1** :
+`io.papermc.paper:paper-api:26.2.build.+` resolu en **26.2.build.112-stable**, `BUILD SUCCESSFUL`,
+aucun avertissement de compilation ni d'API depreciee. Artefact : `build/libs/Thimble-0.1.0.jar`.
+
+Reste a valider **en jeu** sur un serveur Paper 26.2 : le comportement des sauts (detection
+d'atterrissage), la restauration de l'inventaire a la deconnexion, et le nettoyage de la piscine
+en fin de partie.
