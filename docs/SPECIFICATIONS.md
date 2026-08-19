@@ -411,3 +411,22 @@ Tous les textes en **MiniMessage**, avec placeholders `<player>`, `<arena>`, `<l
 - [Thimble — SpigotMC](https://www.spigotmc.org/resources/thimble.88191/) et [syldium/Thimble — GitHub](https://github.com/syldium/Thimble)
 - [Project setup — PaperMC Docs](https://docs.papermc.io/paper/dev/project-setup/) · [plugin.yml — PaperMC Docs](https://docs.papermc.io/paper/dev/plugin-yml/)
 - [paper-api 26.2 javadoc](https://jd.papermc.io/paper/26.2/)
+
+---
+
+## 13. Decisions validees et ecarts du lot 1
+
+Decisions (2026-08-19) : package `fr.thimble` · bonus du de a coudre = case supplementaire ·
+stockage YAML · premiere version = **jeu jouable, retours dans le chat** · le plugin gere
+**uniquement le mini-jeu** (aucun hub, le joueur revient exactement ou il etait).
+
+Ecarts assumes par rapport aux sections ci-dessus, a lever aux lots suivants :
+
+| Ecart | Raison | A faire |
+|---|---|---|
+| Commandes Bukkit classiques (`plugin.yml`) au lieu de Brigadier | API stable, verifiable sans compilation | migration Brigadier au lot 2 si besoin |
+| Bonus du de a coudre : case **tiree au sort** au lieu de choisie | selectionner une case demande une UI fiable | selecteur au lot 2 (`ponytail:` dans `Arena#hit`) |
+| Restauration de la piscine synchrone | une piscine fait au plus quelques centaines de blocs | lots par tick si des arenes geantes apparaissent |
+| Pas de snapshot persiste sur disque | evite un format de fichier de plus | a ajouter si des crashs laissent des arenes sales |
+| Pas de statistiques, ni scoreboard, ni spectateurs | lot 1 volontairement nu | lots 2 et 3 |
+| Region definie par `pos1`/`pos2` (position du joueur) | pas de dependance WorldEdit | adaptateur WorldEdit au lot 4 |

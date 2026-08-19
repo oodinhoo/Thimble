@@ -1,0 +1,85 @@
+# ---------------------------------------------------------------------------
+#  Messages du plugin, au format MiniMessage (https://docs.advntr.dev/minimessage/)
+#  Les <balises> entre chevrons sont remplacees par le plugin.
+# ---------------------------------------------------------------------------
+prefix: "<gradient:#38bdf8:#818cf8><bold>De a coudre</bold></gradient> <dark_gray>|</dark_gray> "
+
+general:
+  no-permission: "<red>Tu n'as pas la permission d'utiliser cette commande.</red>"
+  player-only: "<red>Cette commande doit etre executee en jeu.</red>"
+  usage: "<red>Usage : <white><usage></white></red>"
+  invalid-number: "<red><value> n'est pas un nombre valide.</red>"
+  reloaded: "<green>Configuration et arenes rechargees.</green>"
+
+arena:
+  unknown: "<red>L'arene <white><arena></white> n'existe pas.</red>"
+  already-exists: "<red>L'arene <white><arena></white> existe deja.</red>"
+  created: "<green>Arene <white><arena></white> creee. Configure-la puis active-la avec <white>/th admin enable <arena></white>.</green>"
+  deleted: "<green>Arene <white><arena></white> supprimee.</green>"
+  disabled: "<red>L'arene <white><arena></white> est desactivee.</red>"
+  incomplete: "<red>Arene incomplete : <white><missing></white></red>"
+  enabled-ok: "<green>Arene <white><arena></white> activee.</green>"
+  disabled-ok: "<yellow>Arene <white><arena></white> desactivee.</yellow>"
+  position-set: "<green><what> defini pour l'arene <white><arena></white>.</green>"
+  corner-set: "<green>Coin <white><corner></white> defini <dark_gray>(<white><pos></white>)</dark_gray>. Cases d'eau detectees : <white><water></white>, surface a Y=<white><y></white>.</green>"
+  surface-set: "<green>Surface de la piscine a Y=<white><y></white> <dark_gray>(<white><water></white> case(s) d'eau)</dark_gray>.</green>"
+  value-set: "<green><key> = <white><value></white> pour l'arene <white><arena></white>.</green>"
+  restored: "<green>Piscine de l'arene <white><arena></white> restauree.</green>"
+  busy: "<red>Une partie est en cours dans l'arene <white><arena></white>. Utilise <white>/th admin forcestop <arena></white>.</red>"
+  list-header: "<gray>Arenes (<white><count></white>) :</gray>"
+  list-entry: "<dark_gray>-</dark_gray> <white><arena></white> <gray>:</gray> <state> <dark_gray>(<white><players></white>/<white><max></white>)</dark_gray>"
+  list-empty: "<gray>Aucune arene. Cree-en une avec <white>/th admin create <nom></white>.</gray>"
+  palette-updated: "<green>Palette de <white><arena></white> : <white><palette></white></green>"
+  unknown-material: "<red><value> n'est pas un bloc valide.</red>"
+  info: "<gray>Arene <white><arena></white> : etat=<state> <gray>joueurs=<white><min></white>-<white><max></white> vies=<white><lives></white> timeout=<white><timeout></white>s eau=<white><water></white> palette=<white><palette></white></gray>"
+
+game:
+  already-in-game: "<red>Tu es deja dans une partie.</red>"
+  not-in-game: "<red>Tu n'es dans aucune partie.</red>"
+  full: "<red>Cette arene est pleine.</red>"
+  in-progress: "<red>Une partie est deja en cours dans cette arene.</red>"
+  no-free-arena: "<red>Aucune arene disponible pour le moment.</red>"
+  joined: "<yellow><player></yellow> <gray>rejoint la partie</gray> <dark_gray>(<white><players></white>/<white><max></white>)</dark_gray>"
+  left: "<yellow><player></yellow> <gray>quitte la partie</gray> <dark_gray>(<white><players></white>/<white><max></white>)</dark_gray>"
+  countdown: "<gray>Debut de la partie dans <white><time></white> seconde(s).</gray>"
+  countdown-cancelled: "<red>Pas assez de joueurs, decompte annule.</red>"
+  started: "<green><bold>La partie commence !</bold></green> <gray>Chaque joueur a <white><lives></white> vie(s).</gray>"
+  your-color: "<gray>Ta couleur : <white><block></white></gray>"
+  round: "<dark_gray>---</dark_gray> <white>Manche <round></white> <dark_gray>---</dark_gray>"
+  your-turn: "<green><bold>A toi de jouer !</bold></green> <gray>Saute dans l'eau.</gray>"
+  turn-of: "<gray>Au tour de <yellow><player></yellow>.</gray>"
+  hit: "<green><player></green> <gray>touche l'eau et pose son bloc.</gray>"
+  thimble: "<gold><bold>DE A COUDRE !</bold></gold> <yellow><player></yellow> <gray>a vise un trou de 1x1.</gray>"
+  bonus-block: "<gray>Bonus : une case supplementaire est remplie.</gray>"
+  miss: "<red><player></red> <gray>a rate la piscine</gray> <dark_gray>(<white><lives></white> vie(s) restante(s))</dark_gray>"
+  timeout: "<red><player></red> <gray>n'a pas saute a temps</gray> <dark_gray>(<white><lives></white> vie(s) restante(s))</dark_gray>"
+  eliminated: "<red><bold><player> est elimine !</bold></red> <gray>Il reste <white><remaining></white> joueur(s).</gray>"
+  pool-refilled: "<aqua>Plus une seule case libre : la piscine est remise a neuf !</aqua>"
+  win: "<gold><bold><player> remporte la partie !</bold></gold>"
+  draw: "<yellow>Partie terminee sans vainqueur.</yellow>"
+  stopped: "<red>La partie a ete interrompue.</red>"
+  quit-during-turn: "<gray><player> s'est deconnecte pendant son tour.</gray>"
+
+help:
+  header: "<gray>Commandes du <white>de a coudre</white> :</gray>"
+  player: |-
+    <dark_gray>-</dark_gray> <white>/th join [arene]</white> <gray>: rejoindre une partie</gray>
+    <dark_gray>-</dark_gray> <white>/th leave</white> <gray>: quitter la partie</gray>
+    <dark_gray>-</dark_gray> <white>/th list</white> <gray>: lister les arenes</gray>
+  admin: |-
+    <dark_gray>-</dark_gray> <white>/th admin create|delete <arene></white>
+    <dark_gray>-</dark_gray> <white>/th admin setwait|setjump|setspectator <arene></white> <gray>(a ta position)</gray>
+    <dark_gray>-</dark_gray> <white>/th admin pos1|pos2 <arene></white> <gray>: coins de la piscine</gray>
+    <dark_gray>-</dark_gray> <white>/th admin setsurface <arene> [y]</white>
+    <dark_gray>-</dark_gray> <white>/th admin set <arene> <min|max|lives|timeout> <valeur></white>
+    <dark_gray>-</dark_gray> <white>/th admin palette <arene> <add|remove|clear|list> [bloc]</white>
+    <dark_gray>-</dark_gray> <white>/th admin enable|disable|info|restore <arene></white>
+    <dark_gray>-</dark_gray> <white>/th admin forcestart|forcestop <arene></white>
+    <dark_gray>-</dark_gray> <white>/th admin reload</white>
+
+state:
+  WAITING: "<green>en attente</green>"
+  STARTING: "<yellow>demarrage</yellow>"
+  PLAYING: "<red>en cours</red>"
+  ENDING: "<yellow>fin de partie</yellow>"
+  DISABLED: "<dark_gray>desactivee</dark_gray>"

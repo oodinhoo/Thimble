@@ -1,7 +1,53 @@
 # Thimble
+
 Plugin pour serveur Minecraft permettant de créer et de jouer au mini jeu du "dé à coudre" (thimble)
+
+Chaque joueur saute à tour de rôle d'un plongeoir vers une piscine. Atterrir dans l'eau pose un bloc
+de sa couleur à l'endroit de l'impact — la piscine rétrécit à chaque saut. Rater coûte une vie.
+Le dernier joueur en vie gagne.
+
+## Compilation
+
+Requiert **JDK 25** (Minecraft 26.1+ l'impose).
+
+```bash
+./gradlew build      # -> build/libs/Thimble-0.1.0.jar
+```
+
+Déposer le jar dans `plugins/` d'un serveur **Paper 26.2**.
+
+## Créer une arène
+
+Construire une tour de saut (~20-30 blocs au-dessus de l'eau) et une piscine de 2 à 3 blocs de
+profondeur, puis, en jeu :
+
+```
+/th admin create piscine1
+/th admin setwait piscine1          # lobby d'attente (à ta position)
+/th admin setjump piscine1          # plongeoir
+/th admin setspectator piscine1     # où les joueurs sont renvoyés après leur saut
+/th admin pos1 piscine1             # un coin de la piscine, debout dans l'eau de surface
+/th admin pos2 piscine1             # le coin opposé
+/th admin enable piscine1
+```
+
+`/th admin info piscine1` liste ce qui manque encore. La surface de jeu est le Y le plus haut des
+deux coins ; `/th admin setsurface piscine1 [y]` permet de le forcer.
+
+Réglages : `/th admin set <arène> <min|max|lives|timeout> <valeur>` et
+`/th admin palette <arène> <add|remove|clear|list> [bloc]`.
+
+## Jouer
+
+```
+/th join [arène]    # sans argument : l'arène libre la plus remplie
+/th leave
+/th list
+```
+
+La partie démarre seule dès `min` joueurs (30 s de décompte, 5 s si l'arène est pleine).
 
 ## Documentation
 
-- [Spécifications du jeu et du plugin](docs/SPECIFICATIONS.md) — règles du dé à coudre, cible
-  technique (Paper 26.2 / Java 25), architecture, commandes, configuration et lots de livraison.
+- [Spécifications du jeu et du plugin](docs/SPECIFICATIONS.md) — règles, cible technique,
+  architecture, commandes, configuration, découpage en lots et écarts assumés du lot 1.
