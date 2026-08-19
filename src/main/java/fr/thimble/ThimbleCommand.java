@@ -245,8 +245,9 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
     }
 
     private void setValue(CommandSender sender, Arena arena, String[] args) {
+        String usage = "/th admin set <arene> <min|max|lives|timeout> <valeur>";
         if (args.length < 4) {
-            plugin.send(sender, "general.usage", "usage", "/th admin set <arene> <min|max|lives|timeout> <valeur>");
+            plugin.send(sender, "general.usage", "usage", usage);
             return;
         }
         Integer value = parseInt(sender, args[3]);
@@ -255,7 +256,7 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
         }
         String key = args[2].toLowerCase(Locale.ROOT);
         if (!arena.setValue(key, value)) {
-            plugin.send(sender, "general.usage", "usage", "/th admin set <arene> <min|max|lives|timeout> <valeur>");
+            plugin.send(sender, "general.usage", "usage", usage);
             return;
         }
         plugin.saveArenas();
@@ -284,7 +285,9 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
             }
             default -> { }
         }
-        plugin.saveArenas();
+        if (!action.equals("list")) {
+            plugin.saveArenas();
+        }
         plugin.send(sender, "arena.palette-updated", "arena", arena.id(), "palette", paletteNames(arena));
     }
 

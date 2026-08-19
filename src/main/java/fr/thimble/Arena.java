@@ -239,7 +239,6 @@ final class Arena {
 
     /** Arret propre : tout le monde est restaure, la piscine aussi. */
     void shutdown() {
-        plugin.hud().hideBar(this, viewers());
         viewers().forEach(player -> plugin.hud().clear(player));
         for (UUID uuid : new ArrayList<>(seats.keySet())) {
             Seat seat = seats.remove(uuid);
@@ -714,23 +713,12 @@ final class Arena {
         return inPool(x, z) && world().getBlockAt(x, surfaceY(), z).getType() == Material.WATER;
     }
 
-    int waterLeft() {
-        if (!hasPool()) {
-            return 0;
-        }
-        int count = 0;
-        for (int x = Math.min(corner1.getBlockX(), corner2.getBlockX()); x <= Math.max(corner1.getBlockX(), corner2.getBlockX()); x++) {
-            for (int z = Math.min(corner1.getBlockZ(), corner2.getBlockZ()); z <= Math.max(corner1.getBlockZ(), corner2.getBlockZ()); z++) {
-                if (world().getBlockAt(x, surfaceY(), z).getType() == Material.WATER) {
-                    count++;
-                }
-            }
-        }
-        return count;
-    }
-
-    private Block randomWater() {
+    /** Les cases encore en eau a la surface de la piscine. */
+    private List<Block> waterBlocks() {
         List<Block> water = new ArrayList<>();
+        if (!hasPool()) {
+            return water;
+        }
         for (int x = Math.min(corner1.getBlockX(), corner2.getBlockX()); x <= Math.max(corner1.getBlockX(), corner2.getBlockX()); x++) {
             for (int z = Math.min(corner1.getBlockZ(), corner2.getBlockZ()); z <= Math.max(corner1.getBlockZ(), corner2.getBlockZ()); z++) {
                 Block block = world().getBlockAt(x, surfaceY(), z);
@@ -739,6 +727,15 @@ final class Arena {
                 }
             }
         }
+        return water;
+    }
+
+    int waterLeft() {
+        return waterBlocks().size();
+    }
+
+    private Block randomWater() {
+        List<Block> water = waterBlocks();
         return water.isEmpty() ? null : water.get(ThreadLocalRandom.current().nextInt(water.size()));
     }
 
@@ -779,10 +776,6 @@ final class Arena {
             missing.add("de l'eau a Y=" + surfaceY());
         }
         return missing;
-    }
-
-    boolean enabled() {
-        return enabled;
     }
 
     void setEnabled(boolean enabled) {
