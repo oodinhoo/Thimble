@@ -17,7 +17,7 @@ import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 final class ThimbleCommand implements CommandExecutor, TabCompleter {
 
-    private static final List<String> PLAYER_SUBS = List.of("join", "leave", "list", "help");
+    private static final List<String> PLAYER_SUBS = List.of("join", "spectate", "leave", "list", "help");
     private static final List<String> ADMIN_SUBS = List.of("create", "delete", "setwait", "setjump",
             "setspectator", "pos1", "pos2", "setsurface", "set", "palette", "enable", "disable",
             "info", "restore", "forcestart", "forcestop", "reload");
@@ -34,12 +34,15 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
         if (args.length == 0) {
             return help(sender);
         }
-        if (!args[0].equalsIgnoreCase("admin") && !sender.hasPermission("thimble.play")) {
+        String sub = args[0].toLowerCase(Locale.ROOT);
+        String permission = sub.equals("spectate") ? "thimble.spectate" : "thimble.play";
+        if (!sub.equals("admin") && !sender.hasPermission(permission)) {
             plugin.send(sender, "general.no-permission");
             return true;
         }
-        switch (args[0].toLowerCase(Locale.ROOT)) {
+        switch (sub) {
             case "join" -> join(sender, args);
+            case "spectate" -> spectate(sender, args);
             case "leave" -> leave(sender);
             case "list" -> list(sender);
             case "admin" -> admin(sender, Arrays.copyOfRange(args, 1, args.length));
@@ -68,6 +71,30 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
             return;
         }
         String error = arena.join(player);
+        if (error != null) {
+            plugin.send(player, error, "arena", arena.id());
+        }
+    }
+
+    private void spectate(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            plugin.send(sender, "general.player-only");
+            return;
+        }
+        if (plugin.arenaOf(player) != null) {
+            plugin.send(player, "game.already-in-game");
+            return;
+        }
+        if (args.length < 2) {
+            plugin.send(sender, "general.usage", "usage", "/th spectate <arene>");
+            return;
+        }
+        Arena arena = plugin.arena(args[1]);
+        if (arena == null) {
+            plugin.send(player, "arena.unknown", "arena", args[1]);
+            return;
+        }
+        String error = arena.spectate(player);
         if (error != null) {
             plugin.send(player, error, "arena", arena.id());
         }
@@ -315,7 +342,8 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
             if (sender.hasPermission("thimble.admin")) {
                 options.add("admin");
             }
-        } else if (args[0].equalsIgnoreCase("join") && args.length == 2) {
+        } else if ((args[0].equalsIgnoreCase("join") || args[0].equalsIgnoreCase("spectate"))
+                && args.length == 2) {
             plugin.arenas().forEach(arena -> options.add(arena.id()));
         } else if (args[0].equalsIgnoreCase("admin") && sender.hasPermission("thimble.admin")) {
             switch (args.length) {

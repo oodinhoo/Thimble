@@ -14,6 +14,13 @@ game:
   freeze-ticks: 20
   # Temps maximum pour resoudre un saut. Au-dela, le tour est perdu.
   turn-timeout-seconds: 15
+  # Temps laisse au joueur pour choisir sa case bonus apres un de a coudre.
+  # 0 = la case supplementaire est tiree au sort immediatement.
+  bonus-select-seconds: 8
+  # Delai pendant lequel la place d'un joueur deconnecte est gardee. 0 = pas de reprise.
+  rejoin-grace-seconds: 60
+  # Un joueur qui rejoint une partie deja lancee la regarde au lieu d'etre refuse.
+  wait-as-spectator: true
 
 # Comportement lorsqu'il ne reste plus aucune case d'eau :
 #   true  = la piscine est remise a neuf et la partie continue
@@ -31,3 +38,11 @@ default-palette:
   - ORANGE_WOOL
   - LIGHT_BLUE_WOOL
   - BLACK_WOOL
+
+# Habillage. Passer une entree a false la desactive entierement.
+ui:
+  titles: true
+  sounds: true
+  bossbar: true
+  scoreboard: true
+  particles: true

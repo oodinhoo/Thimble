@@ -9,7 +9,10 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
@@ -53,7 +56,30 @@ final class GameListener implements Listener {
     public void onQuit(PlayerQuitEvent event) {
         Arena arena = plugin.arenaOf(event.getPlayer());
         if (arena != null) {
-            arena.leave(event.getPlayer(), true);
+            arena.disconnect(event.getPlayer());
+        }
+    }
+
+    /** Retour d'un joueur deconnecte pendant sa partie. */
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        for (Arena arena : plugin.arenas()) {
+            if (arena.reconnect(event.getPlayer())) {
+                return;
+            }
+        }
+    }
+
+    /** Choix de la case bonus apres un de a coudre : on vise, on clique droit. */
+    @EventHandler
+    public void onInteract(PlayerInteractEvent event) {
+        if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) {
+            return;
+        }
+        Arena arena = plugin.arenaOf(event.getPlayer());
+        if (arena != null) {
+            event.setCancelled(true);
+            arena.handleBonusClick(event.getPlayer());
         }
     }
 

@@ -107,14 +107,13 @@ rapporte un **bonus configurable** :
 | Libs embarquées | HikariCP + driver SQLite/MySQL (uniquement si stockage SQL activé) | lot 3 |
 
 > Compatibilité confirmée par la compilation : `paper-api:26.2.build.112-stable` sous JDK 25,
-> aucune API dépréciée utilisée. Le jar produit (`build/libs/Thimble-0.1.0.jar`) embarque
+> aucune API dépréciée utilisée. Le jar produit (`build/libs/Thimble-0.2.0.jar`) embarque
 > `plugin.yml` (`api-version: '26.2'`), `config.yml` et `messages.yml`.
 
 ### 2.1 Arborescence du projet
 
-Structure réelle du lot 1 — un package plat, cinq classes. Le découpage en sous-packages
-(`arena/`, `game/`, `storage/`, `ui/`…) ne sera introduit que quand les lots 2 et 3 le rendront
-nécessaire.
+Structure réelle après le lot 2 — un package plat, six classes. Le découpage en sous-packages
+(`arena/`, `game/`, `storage/`…) ne sera introduit que quand le lot 3 le rendra nécessaire.
 
 ```
 Thimble/
@@ -125,7 +124,8 @@ Thimble/
     │   ├── ThimblePlugin.java     # cycle de vie, arènes YAML, config, messages, boucle de tick
     │   ├── Arena.java             # config d'arène + partie : états, tours, sauts, piscine
     │   ├── ThimbleCommand.java    # /th et /th admin, avec complétion
-    │   ├── GameListener.java      # atterrissage, protections, déconnexion
+    │   ├── GameListener.java      # atterrissage, protections, déconnexion, choix du bonus
+    │   ├── Hud.java               # titres, sons, barre de boss, tableau de score, particules
     │   └── PlayerSnapshot.java    # sauvegarde/restauration de l'état du joueur
     └── resources/
         ├── plugin.yml
@@ -430,18 +430,33 @@ Ecarts assumes par rapport aux sections ci-dessus, a lever aux lots suivants :
 | Ecart | Raison | A faire |
 |---|---|---|
 | Commandes Bukkit classiques (`plugin.yml`) au lieu de Brigadier | chargement Bukkit toujours supporte en 26.2, API stable | migration Brigadier au lot 2 si besoin de vrais types d'arguments |
-| Bonus du de a coudre : case **tiree au sort** au lieu de choisie | selectionner une case demande une UI fiable | selecteur au lot 2 (`ponytail:` dans `Arena#hit`) |
 | Restauration de la piscine synchrone | une piscine fait au plus quelques centaines de blocs | lots par tick si des arenes geantes apparaissent |
 | Pas de snapshot persiste sur disque | evite un format de fichier de plus | a ajouter si des crashs laissent des arenes sales |
-| Pas de statistiques, ni scoreboard, ni spectateurs | lot 1 volontairement nu | lots 2 et 3 |
+| Pas de statistiques ni de classement | lot 1 volontairement nu | lot 3 |
 | Region definie par `pos1`/`pos2` (position du joueur) | pas de dependance WorldEdit | adaptateur WorldEdit au lot 4 |
 
 ### 13.1 Verification de compatibilite (2026-08-19)
 
 `gradlew build` sous **JDK 25 (Corretto 25.0.4)** avec **Gradle 9.7.1** :
 `io.papermc.paper:paper-api:26.2.build.+` resolu en **26.2.build.112-stable**, `BUILD SUCCESSFUL`,
-aucun avertissement de compilation ni d'API depreciee. Artefact : `build/libs/Thimble-0.1.0.jar`.
+aucun avertissement de compilation ni d'API depreciee. Artefact : `build/libs/Thimble-0.2.0.jar`.
 
 Reste a valider **en jeu** sur un serveur Paper 26.2 : le comportement des sauts (detection
 d'atterrissage), la restauration de l'inventaire a la deconnexion, et le nettoyage de la piscine
 en fin de partie.
+
+### 13.2 Lot 2 livre (2026-08-19)
+
+| Element | Mise en oeuvre |
+|---|---|
+| Titres et sons | debut de partie, tour du joueur, touche, de a coudre, rate, elimination, victoire |
+| Barre de boss | decompte avant le demarrage, puis chrono du tour en cours |
+| Tableau de score | manche, joueur en train de sauter, liste des joueurs (vies, deconnectes, elimines), cases d'eau restantes ; rafraichi une fois par seconde |
+| Particules | trainee derriere le sauteur, gerbe sur un de a coudre |
+| Spectateurs | `/th spectate <arene>` ; un joueur qui rejoint une partie lancee la regarde (`game.wait-as-spectator`) ; les spectateurs recoivent tous les messages |
+| Bonus du de a coudre | le joueur **choisit** sa case : il vise et fait un clic droit, resolu par un lance de rayon serveur (`FluidCollisionMode.ALWAYS`). Sans choix dans le delai (`game.bonus-select-seconds`), une case est tiree au sort |
+| Reconnexion | la place est gardee `game.rejoin-grace-seconds` ; l'inventaire est rendu des la deconnexion, la partie saute les tours du joueur absent, qui reprend sa place s'il revient a temps |
+| Reglage | tout l'habillage est desactivable un par un dans la section `ui` de `config.yml` |
+
+Ecart restant : la trainee de particules n'est pas a la couleur du joueur (il faudrait une table
+bloc -> couleur qui suivrait toute palette personnalisee) ; elle utilise `END_ROD`.

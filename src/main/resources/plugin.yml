@@ -13,6 +13,9 @@ permissions:
   thimble.play:
     description: Rejoindre et quitter une partie.
     default: true
+  thimble.spectate:
+    description: Observer une partie en cours.
+    default: true
   thimble.admin:
     description: Creer et configurer les arenes.
     default: op

@@ -25,6 +25,7 @@ public final class ThimblePlugin extends JavaPlugin {
 
     private final Map<String, Arena> arenas = new LinkedHashMap<>();
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
+    private final Hud hud = new Hud(this);
     private YamlConfiguration messages;
     private Component prefix = Component.empty();
     private File arenasFile;
@@ -91,6 +92,7 @@ public final class ThimblePlugin extends JavaPlugin {
 
     void deleteArena(Arena arena) {
         arena.shutdown();
+        hud.forget(arena);
         arenas.remove(arena.id());
         saveArenas();
     }
@@ -139,6 +141,27 @@ public final class ThimblePlugin extends JavaPlugin {
 
     boolean refillWhenFull() {
         return getConfig().getBoolean("refill-when-full", true);
+    }
+
+    int bonusSelectSeconds() {
+        return getConfig().getInt("game.bonus-select-seconds", 8);
+    }
+
+    int rejoinGraceSeconds() {
+        return getConfig().getInt("game.rejoin-grace-seconds", 60);
+    }
+
+    boolean waitAsSpectator() {
+        return getConfig().getBoolean("game.wait-as-spectator", true);
+    }
+
+    /** Element d'habillage active ? (titles, sounds, bossbar, scoreboard, particles) */
+    boolean ui(String element) {
+        return getConfig().getBoolean("ui." + element, true);
+    }
+
+    Hud hud() {
+        return hud;
     }
 
     List<Material> defaultPalette() {

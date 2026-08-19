@@ -9,14 +9,21 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.Bukkit;
+import org.bukkit.FluidCollisionMode;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.RayTraceResult;
+
+import net.kyori.adventure.bossbar.BossBar;
+import net.kyori.adventure.text.Component;
 
 /**
  * Une arene : sa configuration, et la partie qui s'y deroule.
@@ -28,10 +35,12 @@ final class Arena {
 
     /** Un joueur dans la partie en cours. */
     private static final class Seat {
-        final PlayerSnapshot snapshot;
+        PlayerSnapshot snapshot;
         Material block;
         int lives;
         boolean alive = true;
+        /** Ticks restants avant l'elimination d'un joueur deconnecte ; 0 = connecte. */
+        int grace;
 
         Seat(PlayerSnapshot snapshot) {
             this.snapshot = snapshot;
@@ -58,13 +67,17 @@ final class Arena {
     // --- partie en cours ---
     private State state = State.WAITING;
     private final Map<UUID, Seat> seats = new LinkedHashMap<>();
+    private final Map<UUID, PlayerSnapshot> spectators = new LinkedHashMap<>();
     private final List<UUID> order = new ArrayList<>();
     private final Map<Block, BlockData> changed = new LinkedHashMap<>();
     private UUID jumper;
+    private UUID bonusPicker;
+    private int bonusTicks;
     private int index;
     private int round;
     private int ticks;
     private int freeze;
+    private int hudTick;
     private boolean falling;
 
     Arena(ThimblePlugin plugin, String id) {
@@ -89,7 +102,25 @@ final class Arena {
     }
 
     boolean contains(Player player) {
-        return seats.containsKey(player.getUniqueId());
+        return seats.containsKey(player.getUniqueId()) || spectators.containsKey(player.getUniqueId());
+    }
+
+    /** Les joueurs qui voient la partie : participants connectes et spectateurs. */
+    List<Player> viewers() {
+        List<Player> viewers = new ArrayList<>();
+        for (UUID uuid : seats.keySet()) {
+            Player player = Bukkit.getPlayer(uuid);
+            if (player != null) {
+                viewers.add(player);
+            }
+        }
+        for (UUID uuid : spectators.keySet()) {
+            Player player = Bukkit.getPlayer(uuid);
+            if (player != null) {
+                viewers.add(player);
+            }
+        }
+        return viewers;
     }
 
     boolean joinable() {
@@ -106,26 +137,47 @@ final class Arena {
             return "arena.disabled";
         }
         if (state == State.PLAYING || state == State.ENDING) {
-            return "game.in-progress";
+            return plugin.waitAsSpectator() ? spectate(player) : "game.in-progress";
         }
         if (seats.size() >= maxPlayers) {
             return "game.full";
         }
         seats.put(player.getUniqueId(), new Seat(PlayerSnapshot.capture(player)));
-        player.getInventory().clear();
-        player.setGameMode(GameMode.ADVENTURE);
-        player.setInvulnerable(true);
-        player.setAllowFlight(false);
-        player.setFlying(false);
-        player.setFallDistance(0);
-        player.teleport(wait);
+        prepare(player, GameMode.ADVENTURE, wait);
         broadcast("game.joined", "player", player.getName(),
                 "players", String.valueOf(seats.size()), "max", String.valueOf(maxPlayers));
         return null;
     }
 
+    /** @return la cle du message d'erreur, ou null si le joueur observe desormais la partie. */
+    String spectate(Player player) {
+        if (!enabled) {
+            return "arena.disabled";
+        }
+        spectators.put(player.getUniqueId(), PlayerSnapshot.capture(player));
+        prepare(player, GameMode.SPECTATOR, spectator != null ? spectator : wait);
+        plugin.send(player, "game.spectating", "arena", id);
+        return null;
+    }
+
+    private void prepare(Player player, GameMode mode, Location destination) {
+        player.getInventory().clear();
+        player.setGameMode(mode);
+        player.setInvulnerable(true);
+        player.setAllowFlight(mode == GameMode.SPECTATOR);
+        player.setFlying(false);
+        player.setFallDistance(0);
+        player.teleport(destination);
+    }
+
     void leave(Player player, boolean announce) {
         UUID uuid = player.getUniqueId();
+        plugin.hud().clear(player);
+        PlayerSnapshot watching = spectators.remove(uuid);
+        if (watching != null) {
+            watching.restore(player);
+            return;
+        }
         Seat seat = seats.remove(uuid);
         if (seat == null) {
             return;
@@ -139,7 +191,6 @@ final class Arena {
         if (state == State.PLAYING) {
             if (uuid.equals(jumper)) {
                 jumper = null;
-                broadcast("game.quit-during-turn", "player", player.getName());
                 nextTurn();
             } else if (aliveCount() <= 1) {
                 end();
@@ -150,18 +201,64 @@ final class Arena {
         }
     }
 
+    /**
+     * Deconnexion en pleine partie : la place est gardee pendant le delai de grace.
+     * L'inventaire est rendu tout de suite (l'evenement de deconnexion precede la sauvegarde).
+     */
+    void disconnect(Player player) {
+        UUID uuid = player.getUniqueId();
+        Seat seat = seats.get(uuid);
+        if (seat == null || state != State.PLAYING || !seat.alive || plugin.rejoinGraceSeconds() <= 0) {
+            leave(player, true);
+            return;
+        }
+        seat.snapshot.restore(player);
+        seat.grace = plugin.rejoinGraceSeconds() * 20;
+        broadcast("game.disconnected", "player", player.getName(),
+                "time", String.valueOf(plugin.rejoinGraceSeconds()));
+        if (uuid.equals(jumper)) {
+            jumper = null;
+            broadcast("game.quit-during-turn", "player", player.getName());
+            nextTurn();
+        }
+    }
+
+    /** @return true si le joueur a repris sa place. */
+    boolean reconnect(Player player) {
+        Seat seat = seats.get(player.getUniqueId());
+        if (seat == null || seat.grace <= 0) {
+            return false;
+        }
+        seat.grace = 0;
+        seat.snapshot = PlayerSnapshot.capture(player);
+        prepare(player, seat.alive ? GameMode.ADVENTURE : GameMode.SPECTATOR,
+                spectator != null ? spectator : wait);
+        broadcast("game.reconnected", "player", player.getName());
+        return true;
+    }
+
     /** Arret propre : tout le monde est restaure, la piscine aussi. */
     void shutdown() {
+        plugin.hud().hideBar(this, viewers());
+        viewers().forEach(player -> plugin.hud().clear(player));
         for (UUID uuid : new ArrayList<>(seats.keySet())) {
             Seat seat = seats.remove(uuid);
             Player player = Bukkit.getPlayer(uuid);
-            if (player != null && seat != null) {
+            if (player != null && seat != null && seat.grace == 0) {
                 seat.snapshot.restore(player);
+            }
+        }
+        for (UUID uuid : new ArrayList<>(spectators.keySet())) {
+            PlayerSnapshot snapshot = spectators.remove(uuid);
+            Player player = Bukkit.getPlayer(uuid);
+            if (player != null && snapshot != null) {
+                snapshot.restore(player);
             }
         }
         order.clear();
         restorePool();
         jumper = null;
+        bonusPicker = null;
         state = State.WAITING;
     }
 
@@ -197,6 +294,7 @@ final class Arena {
                 if (seats.size() < minPlayers) {
                     state = State.WAITING;
                     broadcast("game.countdown-cancelled");
+                    plugin.hud().hideBar(this, viewers());
                     return;
                 }
                 if (seats.size() >= maxPlayers) {
@@ -204,27 +302,76 @@ final class Arena {
                 }
                 if (ticks % 20 == 0) {
                     int seconds = ticks / 20;
+                    plugin.hud().bar(this, viewers(), "bossbar.countdown",
+                            ticks / (float) (plugin.countdownSeconds() * 20), BossBar.Color.BLUE,
+                            "time", String.valueOf(seconds));
                     if (seconds == 30 || seconds == 20 || seconds == 10 || (seconds > 0 && seconds <= 5)) {
                         broadcast("game.countdown", "time", String.valueOf(seconds));
+                        plugin.hud().sound(viewers(), Sound.BLOCK_NOTE_BLOCK_HAT, 1f);
                     }
                 }
                 if (--ticks <= 0) {
                     start();
                 }
             }
-            case PLAYING -> {
-                if (freeze > 0) {
-                    freeze--;
-                } else if (jumper != null && --ticks <= 0) {
-                    miss("game.timeout");
-                }
-            }
+            case PLAYING -> tickTurn();
             case ENDING -> {
                 if (--ticks <= 0) {
                     shutdown();
                 }
             }
             default -> { }
+        }
+        if (++hudTick % 20 == 0) {
+            refreshBoard();
+        }
+    }
+
+    private void tickTurn() {
+        tickGrace();
+        if (bonusPicker != null) {
+            if (--bonusTicks <= 0) {
+                fillBonus(randomWater(), Bukkit.getPlayer(bonusPicker), true);
+                nextTurn();
+            }
+            return;
+        }
+        if (freeze > 0) {
+            freeze--;
+            return;
+        }
+        if (jumper == null) {
+            return;
+        }
+        Player player = Bukkit.getPlayer(jumper);
+        if (player != null && falling) {
+            plugin.hud().trail(player.getLocation(), viewers());
+        }
+        if (ticks % 10 == 0) {
+            plugin.hud().bar(this, viewers(), "bossbar.turn", ticks / (float) (timeout * 20),
+                    BossBar.Color.YELLOW,
+                    "player", player != null ? player.getName() : "?",
+                    "time", String.valueOf(Math.max(0, ticks / 20)));
+        }
+        if (--ticks <= 0) {
+            miss("game.timeout");
+        }
+    }
+
+    /** Decompte du delai de grace des joueurs deconnectes. */
+    private void tickGrace() {
+        for (UUID uuid : new ArrayList<>(seats.keySet())) {
+            Seat seat = seats.get(uuid);
+            if (seat == null || seat.grace <= 0 || --seat.grace > 0) {
+                continue;
+            }
+            seats.remove(uuid);
+            order.remove(uuid);
+            broadcast("game.rejoin-expired", "player", nameOf(uuid),
+                    "remaining", String.valueOf(aliveCount()));
+        }
+        if (state == State.PLAYING && aliveCount() <= 1) {
+            end();
         }
     }
 
@@ -249,6 +396,8 @@ final class Arena {
         index = -1;
         broadcast("game.started", "lives", String.valueOf(lives));
         broadcast("game.round", "round", "1");
+        plugin.hud().title(viewers(), "title.start", "title.start-sub");
+        plugin.hud().sound(viewers(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f);
         nextTurn();
     }
 
@@ -293,6 +442,8 @@ final class Arena {
         player.setFallDistance(0);
         plugin.send(player, "game.your-turn");
         broadcast("game.turn-of", "player", player.getName());
+        plugin.hud().title(player, "title.your-turn", "title.your-turn-sub");
+        plugin.hud().sound(List.of(player), Sound.BLOCK_NOTE_BLOCK_PLING, 1.4f);
     }
 
     /** Appele a chaque deplacement du sauteur en cours. */
@@ -346,17 +497,69 @@ final class Arena {
         boolean thimble = isolated(target.getX(), target.getZ());
         place(target, seat.block);
         broadcast(thimble ? "game.thimble" : "game.hit", "player", player.getName());
-        if (thimble) {
-            // Bonus : une case supplementaire est remplie.
-            // ponytail: case tiree au sort, pas choisie par le joueur -- selecteur a faire au lot 2.
-            Block bonus = randomWater();
-            if (bonus != null) {
-                place(bonus, seat.block);
-                broadcast("game.bonus-block");
-            }
-        }
         park(player);
+        if (thimble) {
+            plugin.hud().title(viewers(), "title.thimble", "title.thimble-sub", "player", player.getName());
+            plugin.hud().sound(viewers(), Sound.ENTITY_PLAYER_LEVELUP, 1.2f);
+            plugin.hud().burst(target.getLocation().add(0.5, 0.5, 0.5), viewers());
+            if (askBonus(player, seat)) {
+                return;
+            }
+        } else {
+            plugin.hud().title(player, "title.hit", null);
+            plugin.hud().sound(List.of(player), Sound.ENTITY_PLAYER_SPLASH, 1f);
+        }
         nextTurn();
+    }
+
+    /**
+     * Bonus du de a coudre : le joueur choisit une case d'eau supplementaire en visant puis
+     * en faisant un clic droit. Sans choix a temps, une case est tiree au sort.
+     *
+     * @return true si la partie attend le choix du joueur.
+     */
+    private boolean askBonus(Player player, Seat seat) {
+        if (plugin.bonusSelectSeconds() <= 0 || waterLeft() == 0) {
+            fillBonus(randomWater(), player, true);
+            return false;
+        }
+        bonusPicker = player.getUniqueId();
+        bonusTicks = plugin.bonusSelectSeconds() * 20;
+        player.getInventory().setItem(0, new ItemStack(seat.block));
+        player.getInventory().setHeldItemSlot(0);
+        plugin.send(player, "game.bonus-choose", "time", String.valueOf(plugin.bonusSelectSeconds()));
+        plugin.hud().title(player, "title.bonus", "title.bonus-sub");
+        return true;
+    }
+
+    /** Clic droit du joueur qui doit choisir sa case bonus. */
+    void handleBonusClick(Player player) {
+        if (bonusPicker == null || !bonusPicker.equals(player.getUniqueId())) {
+            return;
+        }
+        RayTraceResult trace = world().rayTraceBlocks(player.getEyeLocation(),
+                player.getEyeLocation().getDirection(), 60, FluidCollisionMode.ALWAYS, true);
+        Block target = trace == null ? null : trace.getHitBlock();
+        if (target == null || target.getType() != Material.WATER
+                || target.getY() != surfaceY() || !inPool(target.getX(), target.getZ())) {
+            plugin.send(player, "game.bonus-invalid");
+            return;
+        }
+        fillBonus(target, player, false);
+        nextTurn();
+    }
+
+    private void fillBonus(Block target, Player player, boolean random) {
+        bonusPicker = null;
+        bonusTicks = 0;
+        Seat seat = player == null ? null : seats.get(player.getUniqueId());
+        if (target != null && seat != null) {
+            place(target, seat.block);
+            broadcast(random ? "game.bonus-random" : "game.bonus-block");
+        }
+        if (player != null) {
+            player.getInventory().clear();
+        }
     }
 
     private void miss(String messageKey) {
@@ -374,10 +577,17 @@ final class Arena {
                 seat.alive = false;
                 if (player != null) {
                     player.setGameMode(GameMode.SPECTATOR);
+                    plugin.hud().title(player, "title.eliminated", null);
                 }
                 broadcast("game.eliminated", "player", name, "remaining", String.valueOf(aliveCount()));
+                plugin.hud().sound(viewers(), Sound.ENTITY_WITHER_HURT, 1f);
             } else {
                 broadcast(messageKey, "player", name, "lives", String.valueOf(seat.lives));
+                if (player != null) {
+                    plugin.hud().title(player, "title.miss", "title.miss-sub",
+                            "lives", String.valueOf(seat.lives));
+                    plugin.hud().sound(List.of(player), Sound.ENTITY_ITEM_BREAK, 0.8f);
+                }
             }
         }
         if (player != null && seat != null && seat.alive) {
@@ -398,12 +608,60 @@ final class Arena {
                 break;
             }
         }
+        plugin.hud().hideBar(this, viewers());
         if (winner == null) {
             broadcast("game.draw");
+            plugin.hud().title(viewers(), "title.draw", null);
         } else {
-            Player player = Bukkit.getPlayer(winner);
-            broadcast("game.win", "player", player != null ? player.getName() : "?");
+            String name = nameOf(winner);
+            broadcast("game.win", "player", name);
+            plugin.hud().title(viewers(), "title.win", "title.win-sub", "player", name);
+            plugin.hud().sound(viewers(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f);
         }
+    }
+
+    private String nameOf(UUID uuid) {
+        Player player = Bukkit.getPlayer(uuid);
+        if (player != null) {
+            return player.getName();
+        }
+        String name = Bukkit.getOfflinePlayer(uuid).getName();
+        return name != null ? name : "?";
+    }
+
+    /** Tableau de score lateral, rafraichi une fois par seconde. */
+    private void refreshBoard() {
+        List<Player> viewers = viewers();
+        if (viewers.isEmpty()) {
+            return;
+        }
+        List<Component> lines = new ArrayList<>();
+        if (state == State.PLAYING) {
+            lines.add(plugin.message("scoreboard.round", "round", String.valueOf(round)));
+            lines.add(plugin.message("scoreboard.turn",
+                    "player", jumper != null ? nameOf(jumper) : "-"));
+            lines.add(Component.empty());
+            for (UUID uuid : order) {
+                Seat seat = seats.get(uuid);
+                if (seat == null) {
+                    continue;
+                }
+                String key = !seat.alive ? "scoreboard.player-out"
+                        : seat.grace > 0 ? "scoreboard.player-away" : "scoreboard.player";
+                lines.add(plugin.message(key, "player", nameOf(uuid),
+                        "lives", String.valueOf(Math.max(0, seat.lives)),
+                        "block", seat.block == null ? "-" : seat.block.name()));
+            }
+            lines.add(Component.empty());
+            lines.add(plugin.message("scoreboard.water", "water", String.valueOf(waterLeft())));
+        } else {
+            lines.add(plugin.message("scoreboard.waiting",
+                    "players", String.valueOf(seats.size()), "min", String.valueOf(minPlayers)));
+            if (state == State.STARTING) {
+                lines.add(plugin.message("scoreboard.countdown", "time", String.valueOf(ticks / 20)));
+            }
+        }
+        plugin.hud().board(this, lines, viewers);
     }
 
     private void park(Player player) {
@@ -416,11 +674,8 @@ final class Arena {
     }
 
     void broadcast(String key, String... placeholders) {
-        for (UUID uuid : seats.keySet()) {
-            Player player = Bukkit.getPlayer(uuid);
-            if (player != null) {
-                plugin.send(player, key, placeholders);
-            }
+        for (Player player : viewers()) {
+            plugin.send(player, key, placeholders);
         }
     }
 

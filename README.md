@@ -13,7 +13,7 @@ Requiert **JDK 25** (Minecraft 26.1+ l'impose). Un Corretto 25 est installé dan
 
 ```powershell
 $env:JAVA_HOME = "C:\Users\AlexandreODIN\tools\jdk25.0.4_8"
-.\gradlew.bat build      # -> build/libs/Thimble-0.1.0.jar
+.\gradlew.bat build      # -> build/libs/Thimble-0.2.0.jar
 ```
 
 Compilé et vérifié contre `io.papermc.paper:paper-api:26.2.build.112-stable` (Gradle 9.7.1,
@@ -43,12 +43,22 @@ Réglages : `/th admin set <arène> <min|max|lives|timeout> <valeur>` et
 ## Jouer
 
 ```
-/th join [arène]    # sans argument : l'arène libre la plus remplie
+/th join [arène]       # sans argument : l'arène libre la plus remplie
+/th spectate <arène>   # observer une partie en cours
 /th leave
 /th list
 ```
 
-La partie démarre seule dès `min` joueurs (30 s de décompte, 5 s si l'arène est pleine).
+La partie démarre seule dès `min` joueurs (30 s de décompte, 5 s si l'arène est pleine). Rejoindre
+une partie déjà lancée place le joueur en spectateur.
+
+Après un **dé à coudre** (atterrissage dans un trou de 1×1), le joueur choisit une case d'eau
+supplémentaire à remplir : il la vise et fait un clic droit dans les 8 secondes.
+
+Une déconnexion en pleine partie garde la place 60 secondes ; l'inventaire est rendu immédiatement.
+
+Titres, sons, barre de boss, tableau de score et particules se désactivent un par un dans la
+section `ui` de `config.yml`.
 
 ## Documentation
 

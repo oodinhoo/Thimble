@@ -51,6 +51,13 @@ game:
   hit: "<green><player></green> <gray>touche l'eau et pose son bloc.</gray>"
   thimble: "<gold><bold>DE A COUDRE !</bold></gold> <yellow><player></yellow> <gray>a vise un trou de 1x1.</gray>"
   bonus-block: "<gray>Bonus : une case supplementaire est remplie.</gray>"
+  bonus-random: "<gray>Bonus : une case supplementaire est tiree au sort.</gray>"
+  bonus-choose: "<gold>Vise une case d'eau et fais un <white>clic droit</white> <dark_gray>(<white><time></white>s)</dark_gray></gold>"
+  bonus-invalid: "<red>Vise une case d'eau de la piscine.</red>"
+  spectating: "<gray>Tu observes l'arene <white><arena></white>. <white>/th leave</white> pour partir.</gray>"
+  disconnected: "<gray><player> s'est deconnecte, sa place est gardee <white><time></white>s.</gray>"
+  reconnected: "<green><player> reprend sa place.</green>"
+  rejoin-expired: "<red><player> n'est pas revenu a temps.</red> <gray>Il reste <white><remaining></white> joueur(s).</gray>"
   miss: "<red><player></red> <gray>a rate la piscine</gray> <dark_gray>(<white><lives></white> vie(s) restante(s))</dark_gray>"
   timeout: "<red><player></red> <gray>n'a pas saute a temps</gray> <dark_gray>(<white><lives></white> vie(s) restante(s))</dark_gray>"
   eliminated: "<red><bold><player> est elimine !</bold></red> <gray>Il reste <white><remaining></white> joueur(s).</gray>"
@@ -64,7 +71,8 @@ help:
   header: "<gray>Commandes du <white>de a coudre</white> :</gray>"
   player: |-
     <dark_gray>-</dark_gray> <white>/th join [arene]</white> <gray>: rejoindre une partie</gray>
-    <dark_gray>-</dark_gray> <white>/th leave</white> <gray>: quitter la partie</gray>
+    <dark_gray>-</dark_gray> <white>/th spectate <arene></white> <gray>: observer une partie</gray>
+    <dark_gray>-</dark_gray> <white>/th leave</white> <gray>: quitter la partie ou l'observation</gray>
     <dark_gray>-</dark_gray> <white>/th list</white> <gray>: lister les arenes</gray>
   admin: |-
     <dark_gray>-</dark_gray> <white>/th admin create|delete <arene></white>
@@ -83,3 +91,35 @@ state:
   PLAYING: "<red>en cours</red>"
   ENDING: "<yellow>fin de partie</yellow>"
   DISABLED: "<dark_gray>desactivee</dark_gray>"
+
+title:
+  start: "<green><bold>C'est parti !</bold></green>"
+  start-sub: "<gray>Saute dans l'eau, pose ton bloc.</gray>"
+  your-turn: "<gold><bold>A toi !</bold></gold>"
+  your-turn-sub: "<gray>Saute dans la piscine.</gray>"
+  hit: "<aqua>Dans l'eau !</aqua>"
+  thimble: "<gold><bold>DE A COUDRE</bold></gold>"
+  thimble-sub: "<yellow><player></yellow> <gray>a trouve le trou de 1x1</gray>"
+  bonus: "<gold>Choisis une case</gold>"
+  bonus-sub: "<gray>Vise l'eau et clic droit</gray>"
+  miss: "<red><bold>Rate !</bold></red>"
+  miss-sub: "<gray><lives> vie(s) restante(s)</gray>"
+  eliminated: "<dark_red><bold>Elimine</bold></dark_red>"
+  win: "<gold><bold>Victoire</bold></gold>"
+  win-sub: "<yellow><player></yellow> <gray>remporte la partie</gray>"
+  draw: "<yellow>Egalite</yellow>"
+
+bossbar:
+  countdown: "<white>Debut dans <yellow><time></yellow>s</white>"
+  turn: "<white>Au tour de <yellow><player></yellow> <dark_gray>-</dark_gray> <yellow><time></yellow>s</white>"
+
+scoreboard:
+  title: "<gradient:#38bdf8:#818cf8><bold>DE A COUDRE</bold></gradient>"
+  round: "<gray>Manche <white><round></white></gray>"
+  turn: "<gray>Tour de <yellow><player></yellow></gray>"
+  player: "<white><player></white> <dark_gray>-</dark_gray> <red><lives></red> <dark_gray>vie(s)</dark_gray>"
+  player-away: "<gray><player></gray> <dark_gray>- deconnecte</dark_gray>"
+  player-out: "<dark_gray><st><player></st> - elimine</dark_gray>"
+  water: "<aqua>Eau restante : <white><water></white></aqua>"
+  waiting: "<gray>Joueurs : <white><players></white>/<white><min></white></gray>"
+  countdown: "<yellow>Debut dans <white><time></white>s</yellow>"
