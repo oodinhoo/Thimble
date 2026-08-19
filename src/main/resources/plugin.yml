@@ -1,0 +1,18 @@
+name: Thimble
+version: '${version}'
+main: fr.thimble.ThimblePlugin
+api-version: '26.2'
+description: Mini-jeu du "de a coudre" (thimble) - sautez dans la piscine et posez un bloc.
+authors: [ Odinho ]
+commands:
+  thimble:
+    description: Commande principale du mini-jeu du de a coudre.
+    aliases: [ th, deacoudre, dac ]
+    usage: /th help
+permissions:
+  thimble.play:
+    description: Rejoindre et quitter une partie.
+    default: true
+  thimble.admin:
+    description: Creer et configurer les arenes.
+    default: op
