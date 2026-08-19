@@ -21,24 +21,52 @@ aucun avertissement). Déposer le jar dans `plugins/` d'un serveur **Paper 26.2*
 
 ## Créer une arène
 
-Construire une tour de saut (~20-30 blocs au-dessus de l'eau) et une piscine de 2 à 3 blocs de
-profondeur, puis, en jeu :
+### 1. Construire la zone de jeu
+
+| Élément | Recommandé |
+|---|---|
+| Piscine | 7×7 blocs, **3 blocs de profondeur**, remplie d'eau source jusqu'au ras du bord |
+| Bord | blocs solides tout autour, rien qui dépasse au-dessus de la surface |
+| Plongeoir | plateforme 1×1 à 3×3, **20 à 30 blocs** au-dessus de l'eau, centrée sur la piscine |
+| Lobby d'attente | à côté, hors de la piscine |
+| Point spectateur | avec **vue sur la piscine** (c'est de là qu'on vise la case bonus) |
+
+Seule la couche de surface compte : c'est là que les blocs se posent. Les couches du dessous
+restent en eau pour amortir la chute.
+
+### 2. Déclarer l'arène
+
+En jeu, en te plaçant à chaque endroit avant de taper la commande :
 
 ```
 /th admin create piscine1
-/th admin setwait piscine1          # lobby d'attente (à ta position)
-/th admin setjump piscine1          # plongeoir
-/th admin setspectator piscine1     # où les joueurs sont renvoyés après leur saut
-/th admin pos1 piscine1             # un coin de la piscine, debout dans l'eau de surface
-/th admin pos2 piscine1             # le coin opposé
+/th admin setwait piscine1          # debout au lobby d'attente
+/th admin setjump piscine1          # debout sur le plongeoir
+/th admin setspectator piscine1     # debout au point de retour, face à la piscine
+/th admin pos1 piscine1             # dans l'eau, à un coin, au niveau de la surface
+/th admin pos2 piscine1             # au coin opposé, au fond de la piscine
 /th admin enable piscine1
 ```
 
-`/th admin info piscine1` liste ce qui manque encore. La surface de jeu est le Y le plus haut des
-deux coins ; `/th admin setsurface piscine1 [y]` permet de le forcer.
+`pos1` et `pos2` sont les deux coins opposés de la piscine. La **surface de jeu** est le Y le plus
+haut des deux ; `/th admin setsurface piscine1 [y]` permet de le forcer.
+
+### 3. Vérifier
+
+`/th admin info piscine1` affiche l'état, les réglages, le nombre de cases d'eau détectées et la
+liste de ce qui manque encore. Si `eau=0`, la surface est mal placée.
 
 Réglages : `/th admin set <arène> <min|max|lives|timeout> <valeur>` et
 `/th admin palette <arène> <add|remove|clear|list> [bloc]`.
+
+### Pièges courants
+
+- **`eau=0`** : la surface tombe à côté de l'eau — repose `pos1` en étant *dans* l'eau du bord.
+- **Eau courante** au lieu d'eau source : les blocs d'eau qui coulent ne comptent pas.
+- **Un bloc au-dessus de la piscine** (surplomb, plafond) : le joueur atterrit dessus, c'est un raté.
+- **Point spectateur sans vue** sur la piscine : le bonus du dé à coudre devient invisible à viser.
+- Il faut **2 joueurs minimum** pour lancer une partie : le principe même du jeu est le dernier en
+  vie, `min` ne descend pas sous 2.
 
 ## Jouer
 

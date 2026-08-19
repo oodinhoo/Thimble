@@ -461,7 +461,9 @@ final class Arena {
         int x = location.getBlockX();
         int y = location.getBlockY();
         int z = location.getBlockZ();
-        if (inPool(x, z) && y <= surfaceY() && y >= floorY()) {
+        // Fenetre de detection d'au moins 4 blocs : un joueur tombe vite, et les deux coins
+        // peuvent avoir ete poses au meme niveau (piscine "plate" du point de vue de la region).
+        if (inPool(x, z) && y <= surfaceY() && y >= Math.min(floorY(), surfaceY() - 3)) {
             Block target = world().getBlockAt(x, surfaceY(), z);
             if (target.getType() == Material.WATER) {
                 hit(player, target);
