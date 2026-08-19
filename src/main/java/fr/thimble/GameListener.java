@@ -15,6 +15,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.EquipmentSlot;
 
 final class GameListener implements Listener {
 
@@ -70,9 +71,16 @@ final class GameListener implements Listener {
         }
     }
 
-    /** Choix de la case bonus apres un de a coudre : on vise, on clique droit. */
+    /**
+     * Baguette de configuration et choix de la case bonus : on vise, on clique droit.
+     * Un seul clic droit declenche deux evenements, un par main : sans ce filtre, chaque clic
+     * compterait double.
+     */
     @EventHandler
     public void onInteract(PlayerInteractEvent event) {
+        if (event.getHand() != EquipmentSlot.HAND) {
+            return;
+        }
         if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) {
             return;
         }
