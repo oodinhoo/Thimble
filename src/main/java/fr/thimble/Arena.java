@@ -341,7 +341,9 @@ final class Arena {
         }
         if (bonusPicker != null) {
             if (--bonusTicks <= 0) {
-                fillBonus(randomWater(), Bukkit.getPlayer(bonusPicker), true);
+                Player picker = Bukkit.getPlayer(bonusPicker);
+                fillBonus(randomWater(), picker, true);
+                endTurn(picker);
             }
             return;
         }
@@ -366,7 +368,7 @@ final class Arena {
         if (ticks % 10 == 0) {
             plugin.hud().bar(this, viewers(), "bossbar.turn", ticks / (float) (timeout * 20),
                     BossBar.Color.YELLOW,
-                    "player", player != null ? player.getName() : "?",
+                    "player", nameOf(jumper),
                     "time", String.valueOf(Math.max(0, ticks / 20)));
         }
         if (--ticks <= 0) {
@@ -534,10 +536,7 @@ final class Arena {
             plugin.hud().sound(List.of(player), Sound.ENTITY_PLAYER_SPLASH, 1f);
         }
         // Le joueur reste un instant dans l'eau : on voit ou il est tombe avant qu'il disparaisse.
-        pause(plugin.splashPauseTicks(), () -> {
-            park(player);
-            nextTurn();
-        });
+        pause(plugin.splashPauseTicks(), () -> endTurn(player));
     }
 
     /**
@@ -587,6 +586,7 @@ final class Arena {
             return;
         }
         fillBonus(target, player, false);
+        endTurn(player);
     }
 
     private void fillBonus(Block target, Player player, boolean random) {
@@ -601,6 +601,12 @@ final class Arena {
             player.getInventory().clear();
             player.setFlying(false);
             player.setAllowFlight(false);
+        }
+    }
+
+    /** Fin de tour : retour aux gradins, puis joueur suivant. Un seul endroit qui enchaine. */
+    private void endTurn(Player player) {
+        if (player != null) {
             park(player);
         }
         nextTurn();
@@ -634,10 +640,7 @@ final class Arena {
                 }
             }
         }
-        if (player != null && seat != null && seat.alive) {
-            park(player);
-        }
-        nextTurn();
+        endTurn(seat != null && seat.alive ? player : null);
     }
 
     private void end() {
