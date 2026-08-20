@@ -107,8 +107,14 @@ Après un saut réussi, le joueur reste 2 secondes dans l'eau avant de repartir 
 saut manqué renvoie immédiatement.
 
 Après un **dé à coudre** (atterrissage dans un trou de 1×1), le joueur est placé en vol au-dessus
-de la piscine, regard plongeant et immobile — seule la vue bouge : il vise une case d'eau et fait
-un clic droit dans les 8 secondes.
+de la piscine, regard plongeant et immobile — seule la vue bouge. Il a 8 secondes pour faire un
+clic droit, au choix, sur une **case d'eau** (elle se remplit) ou sur un **bloc déjà posé** (elle
+se rouvre). Seuls les blocs posés pendant la partie peuvent être rouverts, jamais le fond ni les
+bords de la piscine.
+
+À la fin d'une partie, les joueurs **restent dans l'arène** : un nouveau décompte démarre tout
+seul, sans avoir à retaper `/th join`. `/th leave` pour sortir. Une partie solo, elle, rend la
+main à la fin.
 
 Une déconnexion en pleine partie garde la place 60 secondes ; l'inventaire est rendu immédiatement.
 

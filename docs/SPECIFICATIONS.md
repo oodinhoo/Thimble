@@ -552,3 +552,17 @@ mise a jour.
 Les textes du jar sont desormais poses en valeurs par defaut (`setDefaults`) : une cle absente du
 fichier de l'administrateur retombe sur celle du jar. Plus rien a supprimer lors d'une mise a
 jour, et les personnalisations sont conservees.
+
+### 13.9 Enchainement des parties et bonus de sabotage
+
+**Enchainement.** A la fin du delai de fin de partie, l'arene ne renvoie plus tout le monde a son
+point de depart : les sieges sont conserves, les vies et les compteurs remis a zero, la piscine
+restauree, et l'etat repasse en attente — le decompte de la partie suivante part donc tout seul.
+Sans cela, enchainer cinq parties demandait cinq `/th join`, la friction qui vide une arene le
+plus vite. Les joueurs deconnectes et les parties solo rendent la main comme avant.
+
+**Sabotage.** Le bonus du de a coudre offre desormais un choix : remplir une case d'eau, ou
+**rouvrir** un bloc deja pose. Seuls les blocs enregistres dans l'instantane de la partie sont
+concernes, ce qui rend le fond et les bords de la piscine intouchables sans ajouter la moindre
+verification de securite. Le bonus passe ainsi d'une strategie unique a un vrai choix : elargir
+pour survivre, ou fermer pour eliminer.

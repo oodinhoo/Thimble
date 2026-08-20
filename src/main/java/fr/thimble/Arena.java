@@ -293,6 +293,35 @@ final class Arena {
         state = State.WAITING;
     }
 
+    /** Remet tout le monde au lobby d'attente pour une nouvelle partie, sans quitter l'arene. */
+    private void requeue() {
+        restorePool();
+        jumper = null;
+        bonusPicker = null;
+        pending = null;
+        pauseTicks = 0;
+        solo = false;
+        order.clear();
+        index = 0;
+        round = 0;
+        for (UUID uuid : new ArrayList<>(seats.keySet())) {
+            Seat seat = seats.get(uuid);
+            Player player = Bukkit.getPlayer(uuid);
+            if (player == null || seat.grace > 0) {
+                seats.remove(uuid);
+                plugin.untrack(uuid);
+                continue;
+            }
+            seat.alive = true;
+            seat.lives = lives;
+            seat.hits = 0;
+            seat.thimbles = 0;
+            prepare(player, GameMode.ADVENTURE, wait);
+        }
+        state = State.WAITING;
+        broadcast("game.replay");
+    }
+
     void forceStop() {
         if (state == State.PLAYING || state == State.STARTING) {
             broadcast("game.stopped");
@@ -349,7 +378,13 @@ final class Arena {
             case PLAYING -> tickTurn();
             case ENDING -> {
                 if (--ticks <= 0) {
-                    shutdown();
+                    // Les joueurs restent sur place pour la partie suivante : sans ca, il faut
+                    // retaper /th join a chaque manche. Le solo, lui, rend la main.
+                    if (solo || seats.isEmpty()) {
+                        shutdown();
+                    } else {
+                        requeue();
+                    }
                 }
             }
             default -> { }
@@ -623,23 +658,38 @@ final class Arena {
             return;
         }
         Block target = ThimblePlugin.targetBlock(player);
-        if (target == null || target.getType() != Material.WATER
-                || target.getY() != surfaceY() || !inPool(target.getX(), target.getZ())) {
+        if (target == null || target.getY() != surfaceY() || !inPool(target.getX(), target.getZ())) {
             plugin.send(player, "game.bonus-invalid");
             return;
         }
-        fillBonus(target, player, false);
+        if (target.getType() == Material.WATER) {
+            fillBonus(target, player, false);
+        } else if (changed.containsKey(target)) {
+            // Sabotage : rouvrir une case bouchee pendant la partie. Seuls les blocs poses par
+            // le jeu sont concernes, le fond et les bords de la piscine restent intouchables.
+            target.setBlockData(changed.remove(target), false);
+            clearBonus(player);
+            broadcast("game.bonus-open", "player", player.getName());
+        } else {
+            plugin.send(player, "game.bonus-invalid");
+            return;
+        }
         endTurn(player);
     }
 
     private void fillBonus(Block target, Player player, boolean random) {
-        bonusPicker = null;
-        bonusTicks = 0;
         Seat seat = player == null ? null : seats.get(player.getUniqueId());
         if (target != null && seat != null) {
             place(target, seat.block);
             broadcast(random ? "game.bonus-random" : "game.bonus-block");
         }
+        clearBonus(player);
+    }
+
+    /** Fin du choix bonus : le joueur redescend de sa vue plongeante. */
+    private void clearBonus(Player player) {
+        bonusPicker = null;
+        bonusTicks = 0;
         if (player != null) {
             player.getInventory().clear();
             player.setFlying(false);
