@@ -524,3 +524,20 @@ et la detection perdait son caractere immediat.
 Retenue a la place : tester les **quatre coins de la hitbox** du joueur, et non le seul centre. Un
 joueur pose sur le bord d'un bloc a forcement un coin au-dessus de ce bloc. Sans etat, sans seuil,
 sans sensibilite a la latence, et valable aussi pour les dalles, escaliers, barrieres et rebords.
+
+### 13.7 Passe d'optimisation
+
+| Point | Avant | Apres |
+|---|---|---|
+| `arenaOf(joueur)` | parcours de toutes les arenes, appele a chaque paquet de mouvement de chaque joueur connecte | index `Map<UUID, Arena>` tenu a jour a l'entree et a la sortie, O(1) |
+| `/th join`, `/th solo`, `/th spectate` | trois fois les memes gardes (joueur, deja en partie, resolution de l'arene) | `idlePlayer()`, `arenaArgument()`, `report()` partages |
+| `/th admin forcestart` | exigeait 2 joueurs, contredisant `min` et empechant de forcer un solo | demarre des qu'un joueur attend |
+| Unites | `freeze-ticks` en ticks, le reste en secondes ; accesseurs melangeant les deux | tout en secondes dans `config.yml`, conversion au seul point d'usage |
+
+`Arena#contains()` disparait, l'index le remplace. Les six endroits qui modifient `seats` ou
+`spectators` mettent tous l'index a jour ; `leave()` verifie d'abord que le joueur appartient bien
+a l'arene, pour qu'un appel croise ne puisse pas desindexer un joueur d'une autre partie.
+
+Ecart de configuration : `freeze-ticks: 20` devient `freeze-seconds: 1`. Un `config.yml` deja
+genere garde l'ancienne cle, qui est ignoree — la valeur par defaut vaut exactement l'ancien
+comportement, donc rien ne change a l'usage.

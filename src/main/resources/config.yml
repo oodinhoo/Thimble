@@ -10,8 +10,8 @@ game:
   countdown-full-seconds: 5
   # Delai entre la fin de la partie et le retour au point de depart.
   end-delay-seconds: 8
-  # Immobilisation sur le plongeoir avant que le joueur puisse sauter (en ticks).
-  freeze-ticks: 20
+  # Immobilisation sur le plongeoir avant que le joueur puisse sauter.
+  freeze-seconds: 1
   # Temps passe dans l'eau apres un saut reussi, avant le retour aux gradins.
   splash-pause-seconds: 2
   # Hauteur du point de vue au-dessus de la piscine pour choisir la case bonus.

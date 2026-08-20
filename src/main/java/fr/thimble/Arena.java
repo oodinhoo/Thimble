@@ -105,10 +105,6 @@ final class Arena {
         return maxPlayers;
     }
 
-    boolean contains(Player player) {
-        return seats.containsKey(player.getUniqueId()) || spectators.containsKey(player.getUniqueId());
-    }
-
     /** Les joueurs qui voient la partie : participants connectes et spectateurs. */
     List<Player> viewers() {
         List<Player> viewers = new ArrayList<>();
@@ -147,6 +143,7 @@ final class Arena {
             return "game.full";
         }
         seats.put(player.getUniqueId(), new Seat(PlayerSnapshot.capture(player)));
+        plugin.track(player, this);
         prepare(player, GameMode.ADVENTURE, wait);
         broadcast("game.joined", "player", player.getName(),
                 "players", String.valueOf(seats.size()), "max", String.valueOf(maxPlayers));
@@ -180,6 +177,7 @@ final class Arena {
             return "arena.disabled";
         }
         spectators.put(player.getUniqueId(), PlayerSnapshot.capture(player));
+        plugin.track(player, this);
         prepare(player, GameMode.SPECTATOR, spectator != null ? spectator : wait);
         plugin.send(player, "game.spectating", "arena", id);
         return null;
@@ -197,6 +195,10 @@ final class Arena {
 
     void leave(Player player, boolean announce) {
         UUID uuid = player.getUniqueId();
+        if (!seats.containsKey(uuid) && !spectators.containsKey(uuid)) {
+            return;
+        }
+        plugin.untrack(uuid);
         plugin.hud().clear(player);
         PlayerSnapshot watching = spectators.remove(uuid);
         if (watching != null) {
@@ -267,6 +269,7 @@ final class Arena {
         viewers().forEach(player -> plugin.hud().clear(player));
         for (UUID uuid : new ArrayList<>(seats.keySet())) {
             Seat seat = seats.remove(uuid);
+            plugin.untrack(uuid);
             Player player = Bukkit.getPlayer(uuid);
             if (player != null && seat != null && seat.grace == 0) {
                 seat.snapshot.restore(player);
@@ -274,6 +277,7 @@ final class Arena {
         }
         for (UUID uuid : new ArrayList<>(spectators.keySet())) {
             PlayerSnapshot snapshot = spectators.remove(uuid);
+            plugin.untrack(uuid);
             Player player = Bukkit.getPlayer(uuid);
             if (player != null && snapshot != null) {
                 snapshot.restore(player);
@@ -297,7 +301,7 @@ final class Arena {
     }
 
     void forceStart() {
-        if (state == State.WAITING && seats.size() >= 2) {
+        if (state == State.WAITING && !seats.isEmpty()) {
             start();
         }
     }
@@ -417,6 +421,7 @@ final class Arena {
             }
             seats.remove(uuid);
             order.remove(uuid);
+            plugin.untrack(uuid);
             broadcast("game.rejoin-expired", "player", nameOf(uuid),
                     "remaining", String.valueOf(aliveCount()));
         }
@@ -487,7 +492,7 @@ final class Arena {
         }
         jumper = player.getUniqueId();
         falling = false;
-        freeze = plugin.freezeTicks();
+        freeze = plugin.freezeSeconds() * 20;
         ticks = timeout * 20;
         player.teleport(jump);
         player.setFallDistance(0);
@@ -574,7 +579,7 @@ final class Arena {
             plugin.hud().sound(List.of(player), Sound.ENTITY_PLAYER_SPLASH, 1f);
         }
         // Le joueur reste un instant dans l'eau : on voit ou il est tombe avant qu'il disparaisse.
-        pause(plugin.splashPauseTicks(), () -> endTurn(player));
+        pause(plugin.splashPauseSeconds() * 20, () -> endTurn(player));
     }
 
     /**

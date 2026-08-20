@@ -33,6 +33,7 @@ public final class ThimblePlugin extends JavaPlugin {
     private final Map<String, Arena> arenas = new LinkedHashMap<>();
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final Hud hud = new Hud(this);
+    private final Map<UUID, Arena> byPlayer = new HashMap<>();
     private YamlConfiguration messages;
     private Component prefix = Component.empty();
     private File arenasFile;
@@ -108,14 +109,20 @@ public final class ThimblePlugin extends JavaPlugin {
         return arenas.values();
     }
 
-    /** L'arene ou se trouve ce joueur, ou null. */
+    /**
+     * L'arene ou se trouve ce joueur, ou null. Indexe plutot que parcouru : appele a chaque
+     * paquet de mouvement de chaque joueur connecte, y compris ceux qui ne jouent pas.
+     */
     Arena arenaOf(Player player) {
-        for (Arena arena : arenas.values()) {
-            if (arena.contains(player)) {
-                return arena;
-            }
-        }
-        return null;
+        return byPlayer.get(player.getUniqueId());
+    }
+
+    void track(Player player, Arena arena) {
+        byPlayer.put(player.getUniqueId(), arena);
+    }
+
+    void untrack(UUID uuid) {
+        byPlayer.remove(uuid);
     }
 
     /** L'arene libre la plus remplie. */
@@ -143,8 +150,8 @@ public final class ThimblePlugin extends JavaPlugin {
     }
 
     /** Temps passe dans l'eau apres un saut reussi, avant le retour aux gradins. */
-    int splashPauseTicks() {
-        return getConfig().getInt("game.splash-pause-seconds", 2) * 20;
+    int splashPauseSeconds() {
+        return getConfig().getInt("game.splash-pause-seconds", 2);
     }
 
     /** Hauteur du point de vue au-dessus de la piscine pour choisir la case bonus. */
@@ -160,8 +167,8 @@ public final class ThimblePlugin extends JavaPlugin {
         return getConfig().getInt("game.end-delay-seconds", 8);
     }
 
-    int freezeTicks() {
-        return getConfig().getInt("game.freeze-ticks", 20);
+    int freezeSeconds() {
+        return getConfig().getInt("game.freeze-seconds", 1);
     }
 
     boolean refillWhenFull() {

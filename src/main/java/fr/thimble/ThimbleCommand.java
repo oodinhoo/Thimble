@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Supplier;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -57,66 +58,66 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
     // ------------------------------------------------------------------
 
     private void join(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) {
-            plugin.send(sender, "general.player-only");
+        Player player = idlePlayer(sender);
+        if (player == null) {
             return;
         }
-        if (plugin.arenaOf(player) != null) {
-            plugin.send(player, "game.already-in-game");
-            return;
-        }
-        Arena arena = args.length > 1 ? plugin.arena(args[1]) : plugin.bestFreeArena();
-        if (arena == null) {
-            plugin.send(player, args.length > 1 ? "arena.unknown" : "game.no-free-arena", "arena",
-                    args.length > 1 ? args[1] : "");
-            return;
-        }
-        String error = arena.join(player);
-        if (error != null) {
-            plugin.send(player, error, "arena", arena.id());
+        Arena arena = arenaArgument(player, args, plugin::bestFreeArena);
+        if (arena != null) {
+            report(player, arena, arena.join(player));
         }
     }
 
     private void solo(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) {
-            plugin.send(sender, "general.player-only");
+        Player player = idlePlayer(sender);
+        if (player == null) {
             return;
         }
-        if (plugin.arenaOf(player) != null) {
-            plugin.send(player, "game.already-in-game");
-            return;
-        }
-        Arena arena = args.length > 1 ? plugin.arena(args[1]) : plugin.freeEmptyArena();
-        if (arena == null) {
-            plugin.send(player, args.length > 1 ? "arena.unknown" : "game.no-free-arena",
-                    "arena", args.length > 1 ? args[1] : "");
-            return;
-        }
-        String error = arena.startSolo(player);
-        if (error != null) {
-            plugin.send(player, error, "arena", arena.id());
+        Arena arena = arenaArgument(player, args, plugin::freeEmptyArena);
+        if (arena != null) {
+            report(player, arena, arena.startSolo(player));
         }
     }
 
     private void spectate(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) {
-            plugin.send(sender, "general.player-only");
-            return;
-        }
-        if (plugin.arenaOf(player) != null) {
-            plugin.send(player, "game.already-in-game");
+        Player player = idlePlayer(sender);
+        if (player == null) {
             return;
         }
         if (args.length < 2) {
-            plugin.send(sender, "general.usage", "usage", "/th spectate <arene>");
+            plugin.send(player, "general.usage", "usage", "/th spectate <arene>");
             return;
         }
-        Arena arena = plugin.arena(args[1]);
+        Arena arena = arenaArgument(player, args, () -> null);
+        if (arena != null) {
+            report(player, arena, arena.spectate(player));
+        }
+    }
+
+    /** @return le joueur, s'il en est un et qu'il n'est pas deja dans une arene. */
+    private Player idlePlayer(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            plugin.send(sender, "general.player-only");
+            return null;
+        }
+        if (plugin.arenaOf(player) != null) {
+            plugin.send(player, "game.already-in-game");
+            return null;
+        }
+        return player;
+    }
+
+    /** L'arene nommee en argument, sinon celle que propose le repli. Signale l'echec. */
+    private Arena arenaArgument(Player player, String[] args, Supplier<Arena> fallback) {
+        Arena arena = args.length > 1 ? plugin.arena(args[1]) : fallback.get();
         if (arena == null) {
-            plugin.send(player, "arena.unknown", "arena", args[1]);
-            return;
+            plugin.send(player, args.length > 1 ? "arena.unknown" : "game.no-free-arena",
+                    "arena", args.length > 1 ? args[1] : "");
         }
-        String error = arena.spectate(player);
+        return arena;
+    }
+
+    private void report(Player player, Arena arena, String error) {
         if (error != null) {
             plugin.send(player, error, "arena", arena.id());
         }
