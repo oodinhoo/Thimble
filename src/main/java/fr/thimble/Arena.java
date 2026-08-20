@@ -76,6 +76,8 @@ final class Arena {
     private int ticks;
     private int freeze;
     private int hudTick;
+    private int pauseTicks;
+    private Runnable pending;
     private boolean falling;
 
     Arena(ThimblePlugin plugin, String id) {
@@ -256,6 +258,8 @@ final class Arena {
         restorePool();
         jumper = null;
         bonusPicker = null;
+        pending = null;
+        pauseTicks = 0;
         state = State.WAITING;
     }
 
@@ -302,7 +306,8 @@ final class Arena {
                     plugin.hud().bar(this, viewers(), "bossbar.countdown",
                             ticks / (float) (plugin.countdownSeconds() * 20), BossBar.Color.BLUE,
                             "time", String.valueOf(seconds));
-                    if (seconds == 30 || seconds == 20 || seconds == 10 || (seconds > 0 && seconds <= 5)) {
+                    if (seconds == 30 || seconds == 20 || seconds == 15 || seconds == 10
+                            || (seconds > 0 && seconds <= 5)) {
                         broadcast("game.countdown", "time", String.valueOf(seconds));
                         plugin.hud().sound(viewers(), Sound.BLOCK_NOTE_BLOCK_HAT, 1f);
                     }
@@ -326,10 +331,17 @@ final class Arena {
 
     private void tickTurn() {
         tickGrace();
+        if (pending != null) {
+            if (--pauseTicks <= 0) {
+                Runnable action = pending;
+                pending = null;
+                action.run();
+            }
+            return;
+        }
         if (bonusPicker != null) {
             if (--bonusTicks <= 0) {
                 fillBonus(randomWater(), Bukkit.getPlayer(bonusPicker), true);
-                nextTurn();
             }
             return;
         }
@@ -341,8 +353,15 @@ final class Arena {
             return;
         }
         Player player = Bukkit.getPlayer(jumper);
-        if (player != null && falling) {
-            plugin.hud().trail(player.getLocation(), viewers());
+        if (player != null) {
+            if (falling) {
+                plugin.hud().trail(player.getLocation(), viewers());
+            }
+            // La resolution est faite ici, et non sur PlayerMoveEvent : un joueur qui atterrit
+            // sur un bloc et reste immobile n'emet plus aucun mouvement.
+            if (checkLanding(player)) {
+                return;
+            }
         }
         if (ticks % 10 == 0) {
             plugin.hud().bar(this, viewers(), "bossbar.turn", ticks / (float) (timeout * 20),
@@ -353,6 +372,12 @@ final class Arena {
         if (--ticks <= 0) {
             miss("game.timeout");
         }
+    }
+
+    /** Met la partie en pause avant d'enchainer, pour laisser voir ce qui vient de se passer. */
+    private void pause(int ticksToWait, Runnable action) {
+        pauseTicks = ticksToWait;
+        pending = action;
     }
 
     /** Decompte du delai de grace des joueurs deconnectes. */
@@ -443,16 +468,13 @@ final class Arena {
         plugin.hud().sound(List.of(player), Sound.BLOCK_NOTE_BLOCK_PLING, 1.4f);
     }
 
-    /** Appele a chaque deplacement du sauteur en cours. */
-    void handleMove(Player player) {
-        if (state != State.PLAYING || freeze > 0 || jumper == null || !jumper.equals(player.getUniqueId())) {
-            return;
-        }
+    /** @return true si le saut vient d'etre resolu. */
+    private boolean checkLanding(Player player) {
         Location location = player.getLocation();
         if (!falling) {
             // Le saut ne commence que lorsque le joueur a vraiment quitte le plongeoir.
             if (location.getY() > jump.getY() - 1.0) {
-                return;
+                return false;
             }
             falling = true;
         }
@@ -465,13 +487,15 @@ final class Arena {
             Block target = world().getBlockAt(x, surfaceY(), z);
             if (target.getType() == Material.WATER) {
                 hit(player, target);
-                return;
+                return true;
             }
         }
         if (onSolidGround(location) || location.getY() < floorY() - 5
                 || location.getY() < world().getMinHeight() + 1) {
             miss("game.miss");
+            return true;
         }
+        return false;
     }
 
     /**
@@ -486,8 +510,10 @@ final class Arena {
                 .getType().isSolid();
     }
 
+    /** Joueur immobilise : sur le plongeoir avant son saut, ou en vol au-dessus de la piscine. */
     boolean frozen(Player player) {
-        return freeze > 0 && jumper != null && jumper.equals(player.getUniqueId());
+        UUID uuid = player.getUniqueId();
+        return (freeze > 0 && uuid.equals(jumper)) || uuid.equals(bonusPicker);
     }
 
     private void hit(Player player, Block target) {
@@ -496,7 +522,6 @@ final class Arena {
         boolean thimble = isolated(target.getX(), target.getZ());
         place(target, seat.block);
         broadcast(thimble ? "game.thimble" : "game.hit", "player", player.getName());
-        park(player);
         if (thimble) {
             plugin.hud().title(viewers(), "title.thimble", "title.thimble-sub", "player", player.getName());
             plugin.hud().sound(viewers(), Sound.ENTITY_PLAYER_LEVELUP, 1.2f);
@@ -508,7 +533,11 @@ final class Arena {
             plugin.hud().title(player, "title.hit", null);
             plugin.hud().sound(List.of(player), Sound.ENTITY_PLAYER_SPLASH, 1f);
         }
-        nextTurn();
+        // Le joueur reste un instant dans l'eau : on voit ou il est tombe avant qu'il disparaisse.
+        pause(plugin.splashPauseTicks(), () -> {
+            park(player);
+            nextTurn();
+        });
     }
 
     /**
@@ -526,9 +555,24 @@ final class Arena {
         bonusTicks = plugin.bonusSelectSeconds() * 20;
         player.getInventory().setItem(0, new ItemStack(seat.block));
         player.getInventory().setHeldItemSlot(0);
+        // Vue plongeante sur la piscine, immobile : seul le regard bouge (voir frozen()).
+        player.setAllowFlight(true);
+        player.setFlying(true);
+        player.teleport(abovePool());
         plugin.send(player, "game.bonus-choose", "time", String.valueOf(plugin.bonusSelectSeconds()));
         plugin.hud().title(player, "title.bonus", "title.bonus-sub");
         return true;
+    }
+
+    /** Point de vue au-dessus du centre de la piscine, regard vers le bas. */
+    private Location abovePool() {
+        double x = (Math.min(corner1.getBlockX(), corner2.getBlockX())
+                + Math.max(corner1.getBlockX(), corner2.getBlockX())) / 2.0 + 0.5;
+        double z = (Math.min(corner1.getBlockZ(), corner2.getBlockZ())
+                + Math.max(corner1.getBlockZ(), corner2.getBlockZ())) / 2.0 + 0.5;
+        Location view = new Location(world(), x, surfaceY() + plugin.bonusViewHeight(), z);
+        view.setPitch(90f);
+        return view;
     }
 
     /** Clic droit du joueur qui doit choisir sa case bonus. */
@@ -543,7 +587,6 @@ final class Arena {
             return;
         }
         fillBonus(target, player, false);
-        nextTurn();
     }
 
     private void fillBonus(Block target, Player player, boolean random) {
@@ -556,7 +599,11 @@ final class Arena {
         }
         if (player != null) {
             player.getInventory().clear();
+            player.setFlying(false);
+            player.setAllowFlight(false);
+            park(player);
         }
+        nextTurn();
     }
 
     private void miss(String messageKey) {

@@ -34,15 +34,13 @@ final class GameListener implements Listener {
         if (arena.frozen(event.getPlayer())) {
             Location from = event.getFrom();
             Location to = event.getTo();
-            if (from.getX() != to.getX() || from.getZ() != to.getZ()) {
+            if (from.getX() != to.getX() || from.getY() != to.getY() || from.getZ() != to.getZ()) {
                 Location blocked = from.clone();
                 blocked.setYaw(to.getYaw());
                 blocked.setPitch(to.getPitch());
                 event.setTo(blocked);
             }
-            return;
         }
-        arena.handleMove(event.getPlayer());
     }
 
     /** Personne ne meurt : les vies sont gerees par le plugin. */

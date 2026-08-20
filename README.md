@@ -93,11 +93,15 @@ placée.
 /th list
 ```
 
-La partie démarre seule dès `min` joueurs (30 s de décompte, 5 s si l'arène est pleine). Rejoindre
+La partie démarre seule dès `min` joueurs (15 s de décompte, 5 s si l'arène est pleine). Rejoindre
 une partie déjà lancée place le joueur en spectateur.
 
-Après un **dé à coudre** (atterrissage dans un trou de 1×1), le joueur choisit une case d'eau
-supplémentaire à remplir : il la vise et fait un clic droit dans les 8 secondes.
+Après un saut réussi, le joueur reste 2 secondes dans l'eau avant de repartir aux gradins ; un
+saut manqué renvoie immédiatement.
+
+Après un **dé à coudre** (atterrissage dans un trou de 1×1), le joueur est placé en vol au-dessus
+de la piscine, regard plongeant et immobile — seule la vue bouge : il vise une case d'eau et fait
+un clic droit dans les 8 secondes.
 
 Une déconnexion en pleine partie garde la place 60 secondes ; l'inventaire est rendu immédiatement.
 

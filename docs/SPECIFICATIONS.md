@@ -472,3 +472,17 @@ activee au dernier clic si `Arena#missing()` est vide.
 Les gradins fixent d'un seul geste le lobby d'attente et le point de retour, qui sont le meme
 endroit dans la quasi-totalite des arenes ; `/th admin setwait` et `setspectator` permettent
 toujours de les separer.
+
+### 13.4 Retours de jeu (2026-08-19)
+
+| Demande | Mise en oeuvre |
+|---|---|
+| Decompte de 30 s trop long | `game.countdown-seconds` passe a 15 |
+| Ne pas teleporter tout de suite apres un saut reussi | pause de `game.splash-pause-seconds` (2 s) avant le retour aux gradins |
+| Retour immediat quand on tombe sur un bloc | la resolution du saut passe de `PlayerMoveEvent` a la boucle de tick |
+| Choix de la case bonus | le joueur est place en vol a `game.bonus-view-height` (12) blocs au-dessus du centre de la piscine, regard vers le bas, immobilise : seule la vue bouge |
+
+La resolution du saut ne pouvait pas rester sur `PlayerMoveEvent` : un joueur qui atterrit sur un
+bloc et ne bouge plus n'emet plus d'evenement de mouvement, son tour ne se terminait donc qu'au
+bout du chrono. La boucle de tick evalue desormais l'atterrissage a chaque tick, independamment
+des paquets du client ; `PlayerMoveEvent` ne sert plus qu'a l'immobilisation.

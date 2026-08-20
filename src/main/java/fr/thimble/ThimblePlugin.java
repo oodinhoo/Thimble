@@ -131,7 +131,17 @@ public final class ThimblePlugin extends JavaPlugin {
     // ------------------------------------------------------------------
 
     int countdownSeconds() {
-        return getConfig().getInt("game.countdown-seconds", 30);
+        return getConfig().getInt("game.countdown-seconds", 15);
+    }
+
+    /** Temps passe dans l'eau apres un saut reussi, avant le retour aux gradins. */
+    int splashPauseTicks() {
+        return getConfig().getInt("game.splash-pause-seconds", 2) * 20;
+    }
+
+    /** Hauteur du point de vue au-dessus de la piscine pour choisir la case bonus. */
+    int bonusViewHeight() {
+        return getConfig().getInt("game.bonus-view-height", 12);
     }
 
     int countdownFullSeconds() {
