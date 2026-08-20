@@ -44,6 +44,7 @@ default-palette:
 # Habillage. Passer une entree a false la desactive entierement.
 ui:
   titles: true
+  actionbar: true
   sounds: true
   bossbar: true
   scoreboard: true

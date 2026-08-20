@@ -23,6 +23,7 @@ import org.bukkit.util.BoundingBox;
 
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 /**
  * Une arene : sa configuration, et la partie qui s'y deroule.
@@ -70,6 +71,8 @@ final class Arena {
     private final Map<UUID, Seat> seats = new LinkedHashMap<>();
     private final Map<UUID, PlayerSnapshot> spectators = new LinkedHashMap<>();
     private final List<UUID> order = new ArrayList<>();
+    /** Joueurs elimines, dans l'ordre : lu a l'envers, c'est le classement. */
+    private final List<UUID> eliminated = new ArrayList<>();
     private final Map<Block, BlockData> changed = new LinkedHashMap<>();
     private UUID jumper;
     private UUID bonusPicker;
@@ -290,6 +293,7 @@ final class Arena {
     private void resetGame() {
         restorePool();
         order.clear();
+        eliminated.clear();
         jumper = null;
         bonusPicker = null;
         pending = null;
@@ -387,7 +391,7 @@ final class Arena {
             default -> { }
         }
         if (++hudTick % 20 == 0) {
-            refreshBoard();
+            refreshHud();
         }
     }
 
@@ -402,6 +406,11 @@ final class Arena {
             return;
         }
         if (bonusPicker != null) {
+            if (bonusTicks % 10 == 0) {
+                plugin.hud().bar(this, viewers(), "bossbar.bonus",
+                        bonusTicks / (float) Math.max(1, plugin.bonusSelectSeconds() * 20),
+                        BossBar.Color.PURPLE, "time", String.valueOf(Math.max(0, bonusTicks / 20)));
+            }
             if (--bonusTicks <= 0) {
                 Player picker = Bukkit.getPlayer(bonusPicker);
                 fillBonus(randomWater(), picker, true);
@@ -428,8 +437,10 @@ final class Arena {
             }
         }
         if (ticks % 10 == 0) {
-            plugin.hud().bar(this, viewers(), "bossbar.turn", ticks / (float) (timeout * 20),
-                    BossBar.Color.YELLOW,
+            boolean urgent = ticks <= 100;
+            plugin.hud().bar(this, viewers(), urgent ? "bossbar.turn-urgent" : "bossbar.turn",
+                    ticks / (float) (timeout * 20),
+                    urgent ? BossBar.Color.RED : BossBar.Color.YELLOW,
                     "player", nameOf(jumper),
                     "time", String.valueOf(Math.max(0, ticks / 20)));
         }
@@ -528,8 +539,6 @@ final class Arena {
         ticks = timeout * 20;
         player.teleport(jump);
         player.setFallDistance(0);
-        plugin.send(player, "game.your-turn");
-        broadcast("game.turn-of", "player", player.getName());
         plugin.hud().title(player, "title.your-turn", "title.your-turn-sub");
         plugin.hud().sound(List.of(player), Sound.BLOCK_NOTE_BLOCK_PLING, 1.4f);
     }
@@ -598,7 +607,8 @@ final class Arena {
             seat.thimbles++;
         }
         place(target, seat.block);
-        broadcast(thimble ? "game.thimble" : "game.hit", "player", player.getName());
+        broadcast(thimble ? "game.thimble" : "game.hit", "player", player.getName(),
+                "water", String.valueOf(waterLeft()));
         if (thimble) {
             plugin.hud().title(viewers(), "title.thimble", "title.thimble-sub", "player", player.getName());
             plugin.hud().sound(viewers(), Sound.ENTITY_PLAYER_LEVELUP, 1.2f);
@@ -715,6 +725,7 @@ final class Arena {
             seat.lives--;
             if (seat.lives <= 0) {
                 seat.alive = false;
+                eliminated.add(uuid);
                 if (player != null) {
                     player.setGameMode(GameMode.SPECTATOR);
                     plugin.hud().title(player, "title.eliminated", null);
@@ -724,8 +735,8 @@ final class Arena {
             } else {
                 broadcast(messageKey, "player", name, "lives", String.valueOf(seat.lives));
                 if (player != null) {
-                    plugin.hud().title(player, "title.miss", "title.miss-sub",
-                            "lives", String.valueOf(seat.lives));
+                    plugin.hud().titleResolved(player, "title.miss", "title.miss-sub",
+                            Placeholder.component("hearts", Hud.hearts(seat.lives, lives)));
                     plugin.hud().sound(List.of(player), Sound.ENTITY_ITEM_BREAK, 0.8f);
                 }
             }
@@ -759,6 +770,33 @@ final class Arena {
             plugin.hud().title(viewers(), "title.win", "title.win-sub", "player", name);
             plugin.hud().sound(viewers(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f);
         }
+        podium(winner);
+    }
+
+    /** Classement de fin : le vainqueur, puis les elimines du dernier au premier. */
+    private void podium(UUID winner) {
+        List<UUID> ranking = new ArrayList<>();
+        if (winner != null) {
+            ranking.add(winner);
+        }
+        for (int i = eliminated.size() - 1; i >= 0; i--) {
+            ranking.add(eliminated.get(i));
+        }
+        if (ranking.isEmpty()) {
+            return;
+        }
+        broadcast("game.podium-header");
+        for (int rank = 0; rank < ranking.size(); rank++) {
+            Seat seat = seats.get(ranking.get(rank));
+            if (seat == null) {
+                continue;
+            }
+            broadcast("game.podium-" + Math.min(rank + 1, 4),
+                    "rank", String.valueOf(rank + 1),
+                    "player", nameOf(ranking.get(rank)),
+                    "hits", String.valueOf(seat.hits),
+                    "thimbles", String.valueOf(seat.thimbles));
+        }
     }
 
     /** Bilan d'une partie solo : cases remplies et des a coudre reussis. */
@@ -790,18 +828,14 @@ final class Arena {
         return name != null ? name : "?";
     }
 
-    /** Tableau de score lateral, rafraichi une fois par seconde. */
-    private void refreshBoard() {
+    /** Tableau de score et barre d'action, rafraichis une fois par seconde. */
+    private void refreshHud() {
         List<Player> viewers = viewers();
         if (viewers.isEmpty()) {
             return;
         }
         List<Component> lines = new ArrayList<>();
         if (state == State.PLAYING) {
-            lines.add(plugin.message("scoreboard.round", "round", String.valueOf(round)));
-            lines.add(plugin.message("scoreboard.turn",
-                    "player", jumper != null ? nameOf(jumper) : "-"));
-            lines.add(Component.empty());
             for (UUID uuid : order) {
                 Seat seat = seats.get(uuid);
                 if (seat == null) {
@@ -809,12 +843,19 @@ final class Arena {
                 }
                 String key = !seat.alive ? "scoreboard.player-out"
                         : seat.grace > 0 ? "scoreboard.player-away" : "scoreboard.player";
-                lines.add(plugin.message(key, "player", nameOf(uuid),
-                        "lives", String.valueOf(Math.max(0, seat.lives)),
-                        "block", seat.block == null ? "-" : seat.block.name()));
+                lines.add(plugin.messageResolved(key,
+                        Placeholder.unparsed("player", nameOf(uuid)),
+                        Placeholder.unparsed("cursor", uuid.equals(jumper) ? "▶" : "·"),
+                        Placeholder.component("square", Hud.square(seat.block)),
+                        Placeholder.component("hearts", Hud.hearts(seat.lives, lives))));
             }
-            lines.add(Component.empty());
-            lines.add(plugin.message("scoreboard.water", "water", String.valueOf(waterLeft())));
+            lines.add(plugin.message("scoreboard.separator"));
+            lines.add(plugin.message("scoreboard.summary",
+                    "round", String.valueOf(round),
+                    "water", String.valueOf(waterLeft()),
+                    "total", String.valueOf(poolSize())));
+            lines.add(plugin.messageResolved("scoreboard.gauge",
+                    Placeholder.component("gauge", Hud.gauge(waterLeft(), poolSize()))));
         } else {
             lines.add(plugin.message("scoreboard.waiting",
                     "players", String.valueOf(seats.size()), "min", String.valueOf(minPlayers)));
@@ -822,7 +863,41 @@ final class Arena {
                 lines.add(plugin.message("scoreboard.countdown", "time", String.valueOf(ticks / 20)));
             }
         }
+        lines.add(plugin.message("scoreboard.arena", "arena", id));
         plugin.hud().board(this, lines, viewers);
+        refreshActionBar(viewers);
+    }
+
+    /** La consigne du moment : elle remplace les rappels que le chat repetait a chaque tour. */
+    private void refreshActionBar(List<Player> viewers) {
+        if (state != State.PLAYING) {
+            plugin.hud().actionBar(viewers, "actionbar.waiting",
+                    "players", String.valueOf(seats.size()), "min", String.valueOf(minPlayers));
+            return;
+        }
+        String water = String.valueOf(waterLeft());
+        for (Player player : viewers) {
+            UUID uuid = player.getUniqueId();
+            if (uuid.equals(bonusPicker)) {
+                plugin.hud().actionBar(List.of(player), "actionbar.bonus",
+                        "time", String.valueOf(Math.max(0, bonusTicks / 20)));
+            } else if (uuid.equals(jumper)) {
+                plugin.hud().actionBar(List.of(player), "actionbar.your-turn", "water", water);
+            } else {
+                plugin.hud().actionBar(List.of(player), "actionbar.watching",
+                        "player", jumper == null ? "-" : nameOf(jumper), "water", water);
+            }
+        }
+    }
+
+    /** Nombre de cases de la surface de jeu, remplies ou non. */
+    int poolSize() {
+        if (!hasPool()) {
+            return 0;
+        }
+        int width = Math.abs(corner1.getBlockX() - corner2.getBlockX()) + 1;
+        int depth = Math.abs(corner1.getBlockZ() - corner2.getBlockZ()) + 1;
+        return width * depth;
     }
 
     private void park(Player player) {
@@ -839,10 +914,10 @@ final class Arena {
         return (int) seats.values().stream().filter(seat -> seat.alive).count();
     }
 
+    /** Les lignes de jeu vont au chat sans prefixe : dans l'arene, personne n'en a besoin. */
     void broadcast(String key, String... placeholders) {
-        for (Player player : viewers()) {
-            plugin.send(player, key, placeholders);
-        }
+        Component line = plugin.message(key, placeholders);
+        viewers().forEach(player -> player.sendMessage(line));
     }
 
     // ------------------------------------------------------------------

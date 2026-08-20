@@ -118,8 +118,12 @@ main à la fin.
 
 Une déconnexion en pleine partie garde la place 60 secondes ; l'inventaire est rendu immédiatement.
 
-Titres, sons, barre de boss, tableau de score et particules se désactivent un par un dans la
-section `ui` de `config.yml`.
+Pendant la partie : le tableau de score donne les joueurs avec leur couleur et leurs vies en cœurs,
+la barre d'action rappelle la consigne du moment, la barre de boss passe au rouge sous cinq
+secondes, et la fin de partie affiche le classement complet.
+
+Titres, sons, barre d'action, barre de boss, tableau de score et particules se désactivent un par
+un dans la section `ui` de `config.yml`.
 
 ## Mettre à jour
 

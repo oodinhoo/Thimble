@@ -7,7 +7,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Color;
+import org.bukkit.DyeColor;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -18,6 +21,10 @@ import org.bukkit.scoreboard.Scoreboard;
 
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.title.Title;
 
@@ -39,11 +46,55 @@ final class Hud {
     }
 
     void title(Player player, String key, String subKey, String... placeholders) {
+        TagResolver[] resolvers = new TagResolver[placeholders.length / 2];
+        for (int i = 0; i + 1 < placeholders.length; i += 2) {
+            resolvers[i / 2] = Placeholder.unparsed(placeholders[i], placeholders[i + 1]);
+        }
+        titleResolved(player, key, subKey, resolvers);
+    }
+
+    void titleResolved(Player player, String key, String subKey, TagResolver... resolvers) {
         if (!plugin.ui("titles")) {
             return;
         }
-        Component subtitle = subKey == null ? Component.empty() : plugin.message(subKey, placeholders);
-        player.showTitle(Title.title(plugin.message(key, placeholders), subtitle, TIMES));
+        Component subtitle = subKey == null ? Component.empty() : plugin.messageResolved(subKey, resolvers);
+        player.showTitle(Title.title(plugin.messageResolved(key, resolvers), subtitle, TIMES));
+    }
+
+    /** Consigne du moment, au-dessus de la barre d'objets. Reenvoyee chaque seconde, sinon elle s'efface. */
+    void actionBar(Collection<Player> players, String key, String... placeholders) {
+        if (!plugin.ui("actionbar")) {
+            return;
+        }
+        Component text = plugin.message(key, placeholders);
+        players.forEach(player -> player.sendActionBar(text));
+    }
+
+    /** Le carre de couleur d'un joueur, deduit du bloc qui lui est attribue. */
+    static Component square(Material block) {
+        for (DyeColor dye : DyeColor.values()) {
+            if (block != null && block.name().startsWith(dye.name() + "_")) {
+                Color color = dye.getColor();
+                return Component.text("■",
+                        TextColor.color(color.getRed(), color.getGreen(), color.getBlue()));
+            }
+        }
+        return Component.text("■", NamedTextColor.WHITE);
+    }
+
+    /** Les vies en coeurs : pleins pour ce qu'il reste, eteints pour ce qui est perdu. */
+    static Component hearts(int remaining, int total) {
+        Component full = Component.text("❤".repeat(Math.max(0, remaining)), NamedTextColor.RED);
+        int lost = Math.max(0, total - remaining);
+        return lost == 0 ? full
+                : full.append(Component.text("❤".repeat(lost), NamedTextColor.DARK_GRAY));
+    }
+
+    /** Jauge en dix crans, pour l'avancement du remplissage de la piscine. */
+    static Component gauge(int value, int max) {
+        int filled = max <= 0 ? 0 : Math.round(10f * value / max);
+        return Component.text("▓".repeat(filled), NamedTextColor.AQUA)
+                .append(Component.text("▓".repeat(10 - filled), NamedTextColor.DARK_GRAY));
     }
 
     void title(Collection<Player> players, String key, String subKey, String... placeholders) {

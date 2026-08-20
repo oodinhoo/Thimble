@@ -566,3 +566,23 @@ plus vite. Les joueurs deconnectes et les parties solo rendent la main comme ava
 concernes, ce qui rend le fond et les bords de la piscine intouchables sans ajouter la moindre
 verification de securite. Le bonus passe ainsi d'une strategie unique a un vrai choix : elargir
 pour survivre, ou fermer pour eliminer.
+
+### 13.10 Refonte de l'affichage
+
+| Element | Etat | Ce qui change |
+|---|---|---|
+| Tableau de score | refonte | carre a la couleur du bloc du joueur, vies en coeurs, curseur sur le sauteur, jauge de remplissage, nom de l'arene ; les lignes « Manche » et « Tour de » fusionnent en une seule |
+| Barre d'action | nouveau | consigne du moment, renvoyee chaque seconde : attente, ton tour, choix du bonus |
+| Barre de boss | nuances | rouge sous cinq secondes, violette pendant le choix du bonus |
+| Titres | resserrage | le sous-titre de raté montre des coeurs plutot qu'une phrase |
+| Chat | allegement | « au tour de » disparait (il vit dans la barre d'action et le tableau de score) et les lignes de jeu perdent le prefixe |
+| Podium | nouveau | classement complet en fin de partie, deduit de l'ordre d'elimination lu a l'envers |
+
+La couleur d'un joueur n'est pas une table codee en dur : elle vient de `DyeColor`, en reconnaissant
+le prefixe du materiau (`RED_WOOL`, `BLUE_CONCRETE`...). N'importe quelle palette teinte fonctionne
+donc sans rien declarer.
+
+Deux limites du jeu, pas du plugin : une barre de boss n'a que six couleurs, il n'y a pas d'or —
+le bonus utilise donc le violet, avec le texte en dore. Et la barre d'action s'efface au bout de
+trois secondes, d'ou le renvoi a chaque seconde, dans le meme rafraichissement que le tableau
+de score.
