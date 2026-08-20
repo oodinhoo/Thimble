@@ -643,7 +643,6 @@ final class Arena {
         player.setAllowFlight(true);
         player.setFlying(true);
         player.teleport(abovePool());
-        plugin.send(player, "game.bonus-choose", "time", String.valueOf(plugin.bonusSelectSeconds()));
         plugin.hud().title(player, "title.bonus", "title.bonus-sub");
         return true;
     }
@@ -834,6 +833,7 @@ final class Arena {
         if (viewers.isEmpty()) {
             return;
         }
+        int water = state == State.PLAYING ? waterLeft() : 0;
         List<Component> lines = new ArrayList<>();
         if (state == State.PLAYING) {
             for (UUID uuid : order) {
@@ -852,10 +852,9 @@ final class Arena {
             lines.add(plugin.message("scoreboard.separator"));
             lines.add(plugin.message("scoreboard.summary",
                     "round", String.valueOf(round),
-                    "water", String.valueOf(waterLeft()),
+                    "water", String.valueOf(water),
                     "total", String.valueOf(poolSize())));
-            lines.add(plugin.messageResolved("scoreboard.gauge",
-                    Placeholder.component("gauge", Hud.gauge(waterLeft(), poolSize()))));
+            lines.add(Hud.gauge(water, poolSize()));
         } else {
             lines.add(plugin.message("scoreboard.waiting",
                     "players", String.valueOf(seats.size()), "min", String.valueOf(minPlayers)));
@@ -865,29 +864,32 @@ final class Arena {
         }
         lines.add(plugin.message("scoreboard.arena", "arena", id));
         plugin.hud().board(this, lines, viewers);
-        refreshActionBar(viewers);
+        refreshActionBar(viewers, water);
     }
 
     /** La consigne du moment : elle remplace les rappels que le chat repetait a chaque tour. */
-    private void refreshActionBar(List<Player> viewers) {
+    private void refreshActionBar(List<Player> viewers, int water) {
         if (state != State.PLAYING) {
             plugin.hud().actionBar(viewers, "actionbar.waiting",
                     "players", String.valueOf(seats.size()), "min", String.valueOf(minPlayers));
             return;
         }
-        String water = String.valueOf(waterLeft());
+        // Les spectateurs lisent tous la meme phrase : elle n'est composee qu'une fois.
+        List<Player> watchers = new ArrayList<>(viewers.size());
         for (Player player : viewers) {
             UUID uuid = player.getUniqueId();
             if (uuid.equals(bonusPicker)) {
                 plugin.hud().actionBar(List.of(player), "actionbar.bonus",
                         "time", String.valueOf(Math.max(0, bonusTicks / 20)));
             } else if (uuid.equals(jumper)) {
-                plugin.hud().actionBar(List.of(player), "actionbar.your-turn", "water", water);
+                plugin.hud().actionBar(List.of(player), "actionbar.your-turn",
+                        "water", String.valueOf(water));
             } else {
-                plugin.hud().actionBar(List.of(player), "actionbar.watching",
-                        "player", jumper == null ? "-" : nameOf(jumper), "water", water);
+                watchers.add(player);
             }
         }
+        plugin.hud().actionBar(watchers, "actionbar.watching",
+                "player", jumper == null ? "-" : nameOf(jumper), "water", String.valueOf(water));
     }
 
     /** Nombre de cases de la surface de jeu, remplies ou non. */
