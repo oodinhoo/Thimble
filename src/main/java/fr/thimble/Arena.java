@@ -19,6 +19,7 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.BoundingBox;
 
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
@@ -82,8 +83,6 @@ final class Arena {
     private Runnable pending;
     private boolean falling;
     private boolean solo;
-    private double lastY;
-    private int stillTicks;
 
     Arena(ThimblePlugin plugin, String id) {
         this.plugin = plugin;
@@ -488,7 +487,6 @@ final class Arena {
         }
         jumper = player.getUniqueId();
         falling = false;
-        stillTicks = 0;
         freeze = plugin.freezeTicks();
         ticks = timeout * 20;
         player.teleport(jump);
@@ -508,8 +506,6 @@ final class Arena {
                 return false;
             }
             falling = true;
-            lastY = location.getY();
-            stillTicks = 0;
         }
         int x = location.getBlockX();
         int y = location.getBlockY();
@@ -523,23 +519,29 @@ final class Arena {
                 return true;
             }
         }
-        if (location.getY() < floorY() - 5 || location.getY() < world().getMinHeight() + 1) {
+        if (onGround(player) || location.getY() < floorY() - 5
+                || location.getY() < world().getMinHeight() + 1) {
             miss("game.miss");
             return true;
         }
-        // Le saut est rate des que la chute s'arrete hors de l'eau. On le mesure a l'altitude
-        // plutot qu'au bloc sous les pieds : en s'immobilisant sur le bord d'un bloc, la colonne
-        // sous le centre du joueur peut etre vide, et le raté passait alors inapercu.
-        // Player#isOnGround() n'est pas une option : il est renseigne par le client.
-        if (location.getY() < lastY - 0.01) {
-            stillTicks = 0;
-        } else {
-            stillTicks++;
-        }
-        lastY = location.getY();
-        if (stillTicks >= 3 && !player.isInWater()) {
-            miss("game.miss");
-            return true;
+        return false;
+    }
+
+    /**
+     * Atterrissage sur un bloc, teste sous les quatre coins de la hitbox : un joueur pose sur le
+     * bord d'un bloc a un centre qui surplombe la colonne voisine, et le raté passait inapercu.
+     * {@code Player#isOnGround()} n'est pas une option, il est renseigne par le client.
+     */
+    private boolean onGround(Player player) {
+        BoundingBox box = player.getBoundingBox();
+        int y = (int) Math.floor(box.getMinY() - 0.05);
+        for (double x : new double[] {box.getMinX(), box.getMaxX()}) {
+            for (double z : new double[] {box.getMinZ(), box.getMaxZ()}) {
+                if (world().getBlockAt((int) Math.floor(x), y, (int) Math.floor(z))
+                        .getType().isSolid()) {
+                    return true;
+                }
+            }
         }
         return false;
     }

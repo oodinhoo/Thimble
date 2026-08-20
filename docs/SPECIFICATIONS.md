@@ -202,11 +202,10 @@ positions pour éviter le coût) :
 - le saut ne commence qu'une fois le joueur descendu sous le plongeoir (marge d'un bloc) ;
 - si la colonne des pieds est dans `pool` et que le bloc `(x, pool.surfaceY, z)` est
   `Material.WATER` → **succès** ;
-- sinon, **échec dès que la chute s'arrête hors de l'eau** : le joueur ne descend plus depuis
-  3 ticks et n'est pas dans l'eau. Le test porte sur l'altitude, et non sur le bloc situé sous
-  les pieds — en s'immobilisant sur le bord d'un bloc, la colonne sous le centre du joueur peut
-  être vide, et le raté passait alors inaperçu. `Player#isOnGround()` n'est pas une option : il
-  est renseigné par le client, donc falsifiable (et déprécié) ;
+- sinon, atterrissage sur un bloc → **échec**. Le test cherche un bloc solide sous les **quatre
+  coins de la hitbox**, et non sous le seul centre : un joueur posé sur le bord d'un bloc a un
+  centre qui surplombe la colonne voisine. `Player#isOnGround()` n'est pas une option : il est
+  renseigné par le client, donc falsifiable (et déprécié) ;
 - chute dans le vide (sous le fond de la piscine, ou sous la hauteur minimale du monde) → **échec** ;
 - tous les `EntityDamageEvent` des joueurs en partie sont **annulés** (le plugin gère lui-même
   les vies) ; le joueur n'est jamais réellement tué.
@@ -517,6 +516,11 @@ de la surface), ni le test de sol (la colonne sous lui est vide) ne se declencha
 restait en suspens, et il suffisait de se decaler vers l'eau pour transformer un raté en reussite,
 sans perdre de vie.
 
-La resolution repose desormais sur l'arret de la chute : trois ticks sans descendre, hors de
-l'eau, valent raté. La regle ne depend plus de la geometrie du bloc d'arrivee et couvre du meme
-coup les dalles, escaliers, barrieres et rebords.
+Premiere correction tentee : deduire le raté de l'arret de la chute (trois ticks sans descendre,
+hors de l'eau). Elle reglait le cas signale mais deplacait le probleme sur l'axe du temps — un
+figement du client de plus de 150 ms en pleine chute suffisait a declarer un raté **en plein vol**,
+et la detection perdait son caractere immediat.
+
+Retenue a la place : tester les **quatre coins de la hitbox** du joueur, et non le seul centre. Un
+joueur pose sur le bord d'un bloc a forcement un coin au-dessus de ce bloc. Sans etat, sans seuil,
+sans sensibilite a la latence, et valable aussi pour les dalles, escaliers, barrieres et rebords.
