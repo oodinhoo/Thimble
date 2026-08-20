@@ -202,9 +202,11 @@ positions pour éviter le coût) :
 - le saut ne commence qu'une fois le joueur descendu sous le plongeoir (marge d'un bloc) ;
 - si la colonne des pieds est dans `pool` et que le bloc `(x, pool.surfaceY, z)` est
   `Material.WATER` → **succès** ;
-- sinon, atterrissage sur un bloc → **échec**. Le test est fait **côté serveur** (bloc solide
-  sous les pieds + joueur pile à la limite du bloc) : `Player#isOnGround()` est déprécié car
-  renseigné par le client, donc falsifiable ;
+- sinon, **échec dès que la chute s'arrête hors de l'eau** : le joueur ne descend plus depuis
+  3 ticks et n'est pas dans l'eau. Le test porte sur l'altitude, et non sur le bloc situé sous
+  les pieds — en s'immobilisant sur le bord d'un bloc, la colonne sous le centre du joueur peut
+  être vide, et le raté passait alors inaperçu. `Player#isOnGround()` n'est pas une option : il
+  est renseigné par le client, donc falsifiable (et déprécié) ;
 - chute dans le vide (sous le fond de la piscine, ou sous la hauteur minimale du monde) → **échec** ;
 - tous les `EntityDamageEvent` des joueurs en partie sont **annulés** (le plugin gère lui-même
   les vies) ; le joueur n'est jamais réellement tué.
@@ -506,3 +508,15 @@ en vie : une partie interrompue (deconnexion, `forcestop`) affiche le bilan simp
 
 Les compteurs `hits` et `thimbles` vivent dans le siege du joueur, le temps de la partie. Leur
 persistance entre parties, et donc un vrai classement, restent le sujet du lot 3.
+
+### 13.6 Raté detecte par l'arret de la chute
+
+Le raté etait deduit du bloc situe sous le centre du joueur. Un joueur immobilise sur le **bord**
+d'un bloc a donc un centre qui surplombe la colonne voisine : ni le test d'eau (il est au-dessus
+de la surface), ni le test de sol (la colonne sous lui est vide) ne se declenchaient. Le tour
+restait en suspens, et il suffisait de se decaler vers l'eau pour transformer un raté en reussite,
+sans perdre de vie.
+
+La resolution repose desormais sur l'arret de la chute : trois ticks sans descendre, hors de
+l'eau, valent raté. La regle ne depend plus de la geometrie du bloc d'arrivee et couvre du meme
+coup les dalles, escaliers, barrieres et rebords.
