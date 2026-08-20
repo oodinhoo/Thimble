@@ -88,10 +88,17 @@ placée.
 
 ```
 /th join [arène]       # sans argument : l'arène libre la plus remplie
+/th solo [arène]       # partie d'entraînement, seul
 /th spectate <arène>   # observer une partie en cours
 /th leave
 /th list
 ```
+
+**Mode solo** : démarre immédiatement, sans décompte ni adversaire, sur une arène libre et vide.
+Le but est de remplir toute la piscine sans épuiser ses vies. La partie s'arrête à court de vies —
+le bilan donne le nombre de cases remplies et de dés à coudre — ou en victoire si la dernière case
+d'eau est bouchée. Contrairement au multijoueur, la piscine n'est jamais remise à neuf en cours de
+partie : c'est justement ce qui fait le score.
 
 La partie démarre seule dès `min` joueurs (15 s de décompte, 5 s si l'arène est pleine). Rejoindre
 une partie déjà lancée place le joueur en spectateur.

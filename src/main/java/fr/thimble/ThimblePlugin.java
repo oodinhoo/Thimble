@@ -126,6 +126,14 @@ public final class ThimblePlugin extends JavaPlugin {
                 .orElse(null);
     }
 
+    /** Une arene activee, libre et sans joueur : de quoi lancer une partie solo. */
+    Arena freeEmptyArena() {
+        return arenas.values().stream()
+                .filter(arena -> arena.joinable() && arena.playerCount() == 0)
+                .findFirst()
+                .orElse(null);
+    }
+
     // ------------------------------------------------------------------
     //  Configuration
     // ------------------------------------------------------------------

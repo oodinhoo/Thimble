@@ -486,3 +486,23 @@ La resolution du saut ne pouvait pas rester sur `PlayerMoveEvent` : un joueur qu
 bloc et ne bouge plus n'emet plus d'evenement de mouvement, son tour ne se terminait donc qu'au
 bout du chrono. La boucle de tick evalue desormais l'atterrissage a chaque tick, independamment
 des paquets du client ; `PlayerMoveEvent` ne sert plus qu'a l'immobilisation.
+
+### 13.5 Mode solo
+
+`/th solo [arene]` demarre une partie a un joueur sur une arene activee, libre et vide, sans
+decompte. Le mode est deduit a l'ouverture (`order.size() == 1`), pas configure : rien a regler
+cote arene, et une meme arene sert au solo comme au multijoueur.
+
+Trois regles changent :
+
+| Regle | Multijoueur | Solo |
+|---|---|---|
+| Fin de partie | au dernier survivant (`aliveCount() <= 1`) | quand le joueur n'a plus de vie (`aliveCount() <= 0`) |
+| Piscine pleine | remise a neuf (`refill-when-full`) | fin de partie, comptee comme une victoire |
+| Bilan | vainqueur annonce | cases remplies et des a coudre reussis |
+
+Le sans-faute exige que la piscine soit reellement pleine, pas seulement que le joueur soit encore
+en vie : une partie interrompue (deconnexion, `forcestop`) affiche le bilan simple.
+
+Les compteurs `hits` et `thimbles` vivent dans le siege du joueur, le temps de la partie. Leur
+persistance entre parties, et donc un vrai classement, restent le sujet du lot 3.

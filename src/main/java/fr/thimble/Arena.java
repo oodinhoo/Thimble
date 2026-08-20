@@ -39,6 +39,8 @@ final class Arena {
         boolean alive = true;
         /** Ticks restants avant l'elimination d'un joueur deconnecte ; 0 = connecte. */
         int grace;
+        int hits;
+        int thimbles;
 
         Seat(PlayerSnapshot snapshot) {
             this.snapshot = snapshot;
@@ -79,6 +81,7 @@ final class Arena {
     private int pauseTicks;
     private Runnable pending;
     private boolean falling;
+    private boolean solo;
 
     Arena(ThimblePlugin plugin, String id) {
         this.plugin = plugin;
@@ -149,6 +152,27 @@ final class Arena {
         return null;
     }
 
+    /**
+     * Partie solo : on remplit la piscine tout seul, sans decompte ni adversaire.
+     * Elle se termine a court de vies, ou en victoire si la piscine est entierement remplie.
+     *
+     * @return la cle du message d'erreur, ou null si la partie a demarre.
+     */
+    String startSolo(Player player) {
+        if (!enabled) {
+            return "arena.disabled";
+        }
+        if (state != State.WAITING || !seats.isEmpty()) {
+            return "game.solo-unavailable";
+        }
+        String error = join(player);
+        if (error != null) {
+            return error;
+        }
+        start();
+        return null;
+    }
+
     /** @return la cle du message d'erreur, ou null si le joueur observe desormais la partie. */
     String spectate(Player player) {
         if (!enabled) {
@@ -192,7 +216,7 @@ final class Arena {
             if (uuid.equals(jumper)) {
                 jumper = null;
                 nextTurn();
-            } else if (aliveCount() <= 1) {
+            } else if (gameOver()) {
                 end();
             }
         } else if (state == State.STARTING && seats.size() < minPlayers) {
@@ -260,6 +284,7 @@ final class Arena {
         bonusPicker = null;
         pending = null;
         pauseTicks = 0;
+        solo = false;
         state = State.WAITING;
     }
 
@@ -394,7 +419,7 @@ final class Arena {
             broadcast("game.rejoin-expired", "player", nameOf(uuid),
                     "remaining", String.valueOf(aliveCount()));
         }
-        if (state == State.PLAYING && aliveCount() <= 1) {
+        if (state == State.PLAYING && gameOver()) {
             end();
         }
     }
@@ -416,9 +441,10 @@ final class Arena {
             }
         }
         state = State.PLAYING;
+        solo = order.size() == 1;
         round = 1;
         index = -1;
-        broadcast("game.started", "lives", String.valueOf(lives));
+        broadcast(solo ? "game.solo-started" : "game.started", "lives", String.valueOf(lives));
         broadcast("game.round", "round", "1");
         plugin.hud().title(viewers(), "title.start", "title.start-sub");
         plugin.hud().sound(viewers(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f);
@@ -429,12 +455,12 @@ final class Arena {
         if (state != State.PLAYING) {
             return;
         }
-        if (aliveCount() <= 1) {
+        if (gameOver()) {
             end();
             return;
         }
         if (waterLeft() == 0) {
-            if (!plugin.refillWhenFull()) {
+            if (solo || !plugin.refillWhenFull()) {
                 end();
                 return;
             }
@@ -522,6 +548,10 @@ final class Arena {
         Seat seat = seats.get(player.getUniqueId());
         jumper = null;
         boolean thimble = isolated(target.getX(), target.getZ());
+        seat.hits++;
+        if (thimble) {
+            seat.thimbles++;
+        }
         place(target, seat.block);
         broadcast(thimble ? "game.thimble" : "game.hit", "player", player.getName());
         if (thimble) {
@@ -656,6 +686,10 @@ final class Arena {
             }
         }
         plugin.hud().hideBar(this, viewers());
+        if (solo) {
+            endSolo();
+            return;
+        }
         if (winner == null) {
             broadcast("game.draw");
             plugin.hud().title(viewers(), "title.draw", null);
@@ -665,6 +699,26 @@ final class Arena {
             plugin.hud().title(viewers(), "title.win", "title.win-sub", "player", name);
             plugin.hud().sound(viewers(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f);
         }
+    }
+
+    /** Bilan d'une partie solo : cases remplies et des a coudre reussis. */
+    private void endSolo() {
+        UUID uuid = order.isEmpty() ? null : order.get(0);
+        Seat seat = uuid == null ? null : seats.get(uuid);
+        if (seat == null) {
+            return;
+        }
+        // Parfait = la piscine est pleine et le joueur tient encore : une partie interrompue
+        // (deconnexion, arret force) ne doit pas etre annoncee comme un sans-faute.
+        boolean perfect = seat.alive && waterLeft() == 0;
+        broadcast(perfect ? "game.solo-perfect" : "game.solo-over",
+                "player", nameOf(uuid),
+                "hits", String.valueOf(seat.hits),
+                "thimbles", String.valueOf(seat.thimbles));
+        plugin.hud().title(viewers(), perfect ? "title.win" : "title.eliminated",
+                perfect ? "title.win-sub" : null, "player", nameOf(uuid));
+        plugin.hud().sound(viewers(),
+                perfect ? Sound.UI_TOAST_CHALLENGE_COMPLETE : Sound.ENTITY_WITHER_HURT, 1f);
     }
 
     private String nameOf(UUID uuid) {
@@ -714,6 +768,11 @@ final class Arena {
     private void park(Player player) {
         player.setFallDistance(0);
         player.teleport(spectator != null ? spectator : wait);
+    }
+
+    /** En solo la partie continue tant que le joueur est en vie ; a plusieurs, jusqu'au dernier. */
+    private boolean gameOver() {
+        return aliveCount() <= (solo ? 0 : 1);
     }
 
     private int aliveCount() {

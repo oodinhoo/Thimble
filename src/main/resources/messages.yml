@@ -43,6 +43,10 @@ game:
   left: "<yellow><player></yellow> <gray>quitte la partie</gray> <dark_gray>(<white><players></white>/<white><max></white>)</dark_gray>"
   countdown: "<gray>Debut de la partie dans <white><time></white> seconde(s).</gray>"
   countdown-cancelled: "<red>Pas assez de joueurs, decompte annule.</red>"
+  solo-started: "<green><bold>Mode solo !</bold></green> <gray>Remplis la piscine sans tomber. <white><lives></white> vie(s).</gray>"
+  solo-unavailable: "<red>Le mode solo demande une arene libre et vide.</red>"
+  solo-over: "<gray>Termine :</gray> <white><hits></white> <gray>case(s) remplie(s),</gray> <gold><thimbles></gold> <gray>de(s) a coudre.</gray>"
+  solo-perfect: "<gold><bold>Piscine entierement remplie !</bold></gold> <white><hits></white> <gray>case(s),</gray> <gold><thimbles></gold> <gray>de(s) a coudre, sans faute.</gray>"
   started: "<green><bold>La partie commence !</bold></green> <gray>Chaque joueur a <white><lives></white> vie(s).</gray>"
   your-color: "<gray>Ta couleur : <white><block></white></gray>"
   round: "<dark_gray>---</dark_gray> <white>Manche <round></white> <dark_gray>---</dark_gray>"
@@ -71,6 +75,7 @@ help:
   header: "<gray>Commandes du <white>de a coudre</white> :</gray>"
   player: |-
     <dark_gray>-</dark_gray> <white>/th join [arene]</white> <gray>: rejoindre une partie</gray>
+    <dark_gray>-</dark_gray> <white>/th solo [arene]</white> <gray>: partie d'entrainement en solo</gray>
     <dark_gray>-</dark_gray> <white>/th spectate <arene></white> <gray>: observer une partie</gray>
     <dark_gray>-</dark_gray> <white>/th leave</white> <gray>: quitter la partie ou l'observation</gray>
     <dark_gray>-</dark_gray> <white>/th list</white> <gray>: lister les arenes</gray>
