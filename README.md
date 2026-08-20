@@ -115,6 +115,13 @@ Une déconnexion en pleine partie garde la place 60 secondes ; l'inventaire est 
 Titres, sons, barre de boss, tableau de score et particules se désactivent un par un dans la
 section `ui` de `config.yml`.
 
+## Mettre à jour
+
+Remplacer le jar dans `plugins/` puis **redémarrer** le serveur. Ni `config.yml` ni `messages.yml`
+ni `arenas.yml` ne sont écrasés, et il n'y a rien à supprimer : les réglages et les textes absents
+d'un fichier existant retombent sur ceux du jar. Pour voir les nouvelles options commentées, il
+suffit de supprimer le fichier concerné, qui sera régénéré complet.
+
 ## Documentation
 
 - [Spécifications du jeu et du plugin](docs/SPECIFICATIONS.md) — règles, cible technique,

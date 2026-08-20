@@ -541,3 +541,14 @@ a l'arene, pour qu'un appel croise ne puisse pas desindexer un joueur d'une autr
 Ecart de configuration : `freeze-ticks: 20` devient `freeze-seconds: 1`. Un `config.yml` deja
 genere garde l'ancienne cle, qui est ignoree — la valeur par defaut vaut exactement l'ancien
 comportement, donc rien ne change a l'usage.
+
+### 13.8 Mises a jour sans perte
+
+`messages.yml` est charge a la main, il n'avait donc pas le filet que Bukkit tend automatiquement
+a `config.yml` : une cle ajoutee par une nouvelle version manquait au fichier deja present sur le
+serveur, et s'affichait en clair sous forme de cle brute. Il fallait supprimer le fichier a chaque
+mise a jour.
+
+Les textes du jar sont desormais poses en valeurs par defaut (`setDefaults`) : une cle absente du
+fichier de l'administrateur retombe sur celle du jar. Plus rien a supprimer lors d'une mise a
+jour, et les personnalisations sont conservees.

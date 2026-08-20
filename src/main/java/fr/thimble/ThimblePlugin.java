@@ -2,6 +2,9 @@ package fr.thimble;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -65,6 +68,16 @@ public final class ThimblePlugin extends JavaPlugin {
         arenas.clear();
         reloadConfig();
         messages = YamlConfiguration.loadConfiguration(new File(getDataFolder(), "messages.yml"));
+        // Les textes du jar servent de repli : une mise a jour qui ajoute des messages n'oblige
+        // pas a supprimer le fichier existant, et les personnalisations sont conservees.
+        try (InputStream bundled = getResource("messages.yml")) {
+            if (bundled != null) {
+                messages.setDefaults(YamlConfiguration.loadConfiguration(
+                        new InputStreamReader(bundled, StandardCharsets.UTF_8)));
+            }
+        } catch (IOException e) {
+            getLogger().warning("Messages par defaut illisibles : " + e.getMessage());
+        }
         prefix = miniMessage.deserialize(messages.getString("prefix", ""));
         YamlConfiguration stored = YamlConfiguration.loadConfiguration(arenasFile);
         for (String id : stored.getKeys(false)) {
