@@ -59,6 +59,7 @@ game:
   bonus-choose: "<gold>Clic droit sur une <white>case d'eau</white> pour la remplir, ou sur un <white>bloc pose</white> pour le rouvrir <dark_gray>(<white><time></white>s)</dark_gray></gold>"
   bonus-open: "<aqua><player> rouvre une case !</aqua>"
   replay: "<green>Nouvelle partie dans un instant.</green> <gray>Reste ou pars avec <white>/th leave</white>.</gray>"
+  replay-waiting: "<gray>En attente de joueurs <dark_gray>(<white><players></white>/<white><min></white>)</dark_gray>. <white>/th leave</white> pour partir.</gray>"
   bonus-invalid: "<red>Vise une case d'eau, ou un bloc pose pendant la partie.</red>"
   spectating: "<gray>Tu observes l'arene <white><arena></white>. <white>/th leave</white> pour partir.</gray>"
   disconnected: "<gray><player> s'est deconnecte, sa place est gardee <white><time></white>s.</gray>"

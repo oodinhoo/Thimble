@@ -283,8 +283,13 @@ final class Arena {
                 snapshot.restore(player);
             }
         }
-        order.clear();
+        resetGame();
+    }
+
+    /** Remet la piscine et l'etat de partie a zero, sans toucher aux joueurs. */
+    private void resetGame() {
         restorePool();
+        order.clear();
         jumper = null;
         bonusPicker = null;
         pending = null;
@@ -295,15 +300,7 @@ final class Arena {
 
     /** Remet tout le monde au lobby d'attente pour une nouvelle partie, sans quitter l'arene. */
     private void requeue() {
-        restorePool();
-        jumper = null;
-        bonusPicker = null;
-        pending = null;
-        pauseTicks = 0;
-        solo = false;
-        order.clear();
-        index = 0;
-        round = 0;
+        resetGame();
         for (UUID uuid : new ArrayList<>(seats.keySet())) {
             Seat seat = seats.get(uuid);
             Player player = Bukkit.getPlayer(uuid);
@@ -318,8 +315,8 @@ final class Arena {
             seat.thimbles = 0;
             prepare(player, GameMode.ADVENTURE, wait);
         }
-        state = State.WAITING;
-        broadcast("game.replay");
+        broadcast(seats.size() >= minPlayers ? "game.replay" : "game.replay-waiting",
+                "players", String.valueOf(seats.size()), "min", String.valueOf(minPlayers));
     }
 
     void forceStop() {
