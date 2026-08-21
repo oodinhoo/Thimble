@@ -15,8 +15,9 @@ $env:JAVA_HOME = "<chemin vers un JDK 25>"
 .\gradlew.bat build      # -> build/libs/Thimble-0.2.0.jar
 ```
 
-Compilé et vérifié contre `io.papermc.paper:paper-api:26.2.build.112-stable` (Gradle 9.7.1,
-aucun avertissement). Déposer le jar dans `plugins/` d'un serveur **Paper 26.2**.
+Compilé contre `io.papermc.paper:paper-api:26.2.build.112-stable` (Gradle 9.7.1, aucun
+avertissement). `.\gradlew.bat test` lance les tests. Déposer le jar dans `plugins/` d'un serveur
+**Paper 26.2**.
 
 ## Créer une arène
 
@@ -115,7 +116,9 @@ bords de la piscine.
 seul, sans avoir à retaper `/th join`. `/th leave` pour sortir. Une partie solo, elle, rend la
 main à la fin.
 
-Une déconnexion en pleine partie garde la place 60 secondes ; l'inventaire est rendu immédiatement.
+Une déconnexion en pleine partie garde la place 60 secondes ; l'inventaire est rendu
+immédiatement. Si le serveur tombe pendant une partie, l'inventaire et la position d'origine sont
+rendus à la connexion suivante — ils sont écrits sur disque dès l'entrée en arène.
 
 Pendant la partie : le tableau de score donne les joueurs avec leur couleur et leurs vies en cœurs,
 la barre d'action rappelle la consigne du moment, la barre de boss passe au rouge sous cinq
@@ -134,4 +137,5 @@ suffit de supprimer le fichier concerné, qui sera régénéré complet.
 ## Documentation
 
 - [Spécifications du jeu et du plugin](docs/SPECIFICATIONS.md) — règles, cible technique,
-  architecture, commandes, configuration, découpage en lots et écarts assumés du lot 1.
+  architecture, détection des sauts, commandes, fichiers, affichage, et ce qui n'est
+  volontairement pas fait.

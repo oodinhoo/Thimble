@@ -1,616 +1,307 @@
-# Thimble — Spécifications du mini-jeu « Dé à coudre »
+# Thimble — spécifications
 
-> Plugin serveur Minecraft **Java Edition 26.2** (PaperMC), permettant de créer des arènes et
-> de jouer au mini-jeu du dé à coudre.
->
-> Statut : spécification fonctionnelle et technique — version 1.0 (à valider avant implémentation).
+Plugin **PaperMC 26.2** du mini-jeu du « dé à coudre ». Ce document décrit le plugin tel qu'il est,
+et les décisions qui ne se lisent pas dans le code. L'historique des changements est dans git.
 
 ---
 
 ## 1. Le jeu
 
-### 1.1 Origine
+Le « dé à coudre » est un sport Minecraft inventé sur le serveur français Minefield par Tenshinryu
+et Skayloss, popularisé sous ce nom par Bob Lennon, connu à l'international sous le nom *Thimble*.
 
-Le « dé à coudre » est un sport Minecraft inventé par deux joueurs du serveur français Minefield
-(Tenshinryu et Skayloss) et popularisé sous ce nom par Bob Lennon. Il est connu à l'international
-sous le nom **Thimble**.
+Chaque joueur saute à tour de rôle d'un plongeoir vers une piscine. Atterrir dans l'eau pose un
+bloc de sa couleur à l'endroit de l'impact : la piscine rétrécit à chaque saut. Rater coûte une
+vie. **Le dernier joueur en vie gagne.**
 
-### 1.2 Principe en une phrase
+### 1.1 Terrain
 
-Chaque joueur saute à tour de rôle du haut d'un plongeoir vers une piscine ; s'il atterrit dans
-l'eau, il pose un bloc de sa couleur à l'endroit exact de son impact — la piscine rétrécit donc à
-chaque saut, jusqu'à ce qu'il ne reste qu'un ou deux blocs d'eau. Rater la piscine = mourir de
-chute = perdre une vie. **Le dernier joueur en vie gagne.**
-
-### 1.3 Terrain
-
-| Élément | Valeur recommandée | Contrainte |
+| Élément | Recommandé | Contrainte |
 |---|---|---|
-| Hauteur du plongeoir | 20 à 30 blocs au-dessus de la surface de l'eau | doit être létale en cas de chute hors piscine |
-| Surface de la piscine | 5×5 à 11×11 (7×7 par défaut) | zone rectangulaire, définie par 2 coins |
-| Profondeur de la piscine | 2 à 3 blocs | 1 seul niveau de « surface » est jouable |
-| Plateforme de saut | 1×1 à 3×3, barrières/vitres autour | le joueur y est téléporté à son tour |
-| Zone de spectateur | libre | hors zone de jeu |
+| Piscine | 7×7, 3 blocs de profondeur | zone rectangulaire définie par deux coins |
+| Surface de jeu | le Y le plus haut des deux coins | seul niveau où des blocs se posent et se comptent |
+| Plongeoir | 20 à 30 blocs au-dessus de l'eau | rien ne l'impose techniquement |
+| Gradins | vue sur la piscine | lobby d'attente et point de retour après chaque saut |
 
-La **surface de jeu** est le plan horizontal `y = poolSurfaceY` : c'est le seul niveau où des blocs
-sont posés et où les cases sont comptées. Les niveaux inférieurs restent en eau pour amortir la
-chute.
+### 1.2 Déroulement
 
-### 1.4 Déroulement d'une partie
+1. **Attente** — `/th join`. Le décompte part dès `min` joueurs (15 s, ramené à 5 s si l'arène est pleine).
+2. **Démarrage** — couleur unique par joueur, `lives` vies chacun (3 par défaut).
+3. **Tour** — téléportation sur le plongeoir, immobilisation d'une seconde, chrono de 15 s.
+   - atterrissage dans l'eau → le bloc est posé, 2 s sur place, retour aux gradins ;
+   - atterrissage sur un bloc, chute dans le vide, ou chrono écoulé → une vie en moins, retour immédiat.
+4. **Élimination** — à 0 vie, le joueur passe spectateur ; l'ordre d'élimination fait le classement.
+5. **Fin** — dernier survivant, ou piscine pleine (remise à neuf ou fin selon `refill-when-full`).
+   Podium, puis les joueurs **restent en place** et une nouvelle partie s'enchaîne.
 
-1. **Attente** — les joueurs rejoignent l'arène (`/th join`), attendent dans le lobby d'attente.
-2. **Démarrage** — dès que `minPlayers` est atteint, décompte (30 s par défaut, réduit à 5 s si
-   `maxPlayers` est atteint). Chaque joueur reçoit une **couleur unique** (laine/béton) et un
-   nombre de vies (`lives`, 3 par défaut).
-3. **Manches** — la partie est une succession de manches ; une manche = un tour de jeu pour chaque
-   joueur encore en vie, dans un ordre fixé au départ (aléatoire, puis rotatif).
-4. **Tour d'un joueur** :
-   - téléportation sur le plongeoir, immobilisation courte (`freezeTicks`, 20 ticks) ;
-   - libération, le joueur saute ; un chrono (`turnTimeout`, 15 s par défaut) court ;
-   - **résolution** à l'atterrissage :
-     - *atterrissage dans l'eau de la piscine* → succès : le bloc d'eau touché est remplacé par
-       le bloc de la couleur du joueur, le joueur est téléporté hors de la piscine ;
-     - *atterrissage sur un bloc / hors de la région* → échec : le joueur perd une vie ;
-     - *chrono écoulé sans résolution* → échec (perte d'une vie) ;
-   - passage au joueur suivant.
-5. **Élimination** — un joueur à 0 vie est éliminé et passe en mode spectateur.
-6. **Fin** — la partie s'arrête quand il ne reste qu'un joueur en vie (vainqueur), ou 0 joueur
-   (égalité si double élimination en mode simultané), ou si la piscine est entièrement remplie
-   (voir 1.7). Récompenses, message de victoire, retour au lobby, **restauration de l'arène**.
+### 1.3 Le dé à coudre
 
-### 1.5 Le « dé à coudre » (coup parfait)
+Atterrir dans un **trou de 1×1** — les quatre cases voisines déjà remplies. Le joueur est alors
+placé en vol au-dessus de la piscine, regard plongeant, immobile : il a 8 secondes pour viser et
+faire un clic droit, au choix sur **une case d'eau** (elle se remplit) ou sur **un bloc posé**
+(elle se rouvre). Sans choix à temps, une case est tirée au sort.
 
-On dit qu'un joueur *fait un dé à coudre* lorsqu'il atterrit dans un **trou de 1×1**, c'est-à-dire
-une case d'eau dont les 4 voisines orthogonales (option : les 8 voisines) au niveau de la surface
-sont déjà remplies. Ce coup est mis en avant (titre, son, particules, statistique dédiée) et
-rapporte un **bonus configurable** :
+Le sabotage n'accepte que les blocs posés pendant la partie : ils viennent du journal de
+restauration, donc le fond et les bords de la piscine sont hors d'atteinte sans qu'aucune
+vérification n'ait à l'énoncer.
 
-| Bonus | Clé de config | Effet |
+### 1.4 Mode solo
+
+`/th solo [arène]` démarre une partie à un joueur sur une arène libre et vide, sans décompte. Le
+mode est **déduit** à l'ouverture (`order.size() == 1`), pas configuré : la même arène sert au solo
+et au multijoueur. Trois règles changent.
+
+| Règle | Multijoueur | Solo |
 |---|---|---|
-| Case supplémentaire (défaut) | `extra_block` | le joueur choisit une 2ᵉ case d'eau à remplir |
-| Vie supplémentaire | `extra_life` | +1 vie (plafonnée à `maxLives`) |
-| Saut sauté | `skip_turn` | le joueur passe son prochain tour sans risque |
-| Aucun | `none` | bonus purement cosmétique (points de stats) |
+| Fin de partie | au dernier survivant | quand le joueur n'a plus de vie |
+| Piscine pleine | remise à neuf | fin de partie, comptée comme une victoire |
+| Bilan | vainqueur et podium | cases remplies et dés à coudre réussis |
 
-### 1.6 Modes de jeu
-
-- **`TURN` (tour par tour)** — mode historique, un seul sauteur à la fois. Ordre de passage
-  affiché. Recommandé par défaut.
-- **`CONCURRENT` (simultané)** — tous les joueurs sautent en même temps depuis un plongeoir
-  élargi ; l'ordre de résolution est l'ordre d'atterrissage. Deux joueurs ne peuvent pas remplir
-  la même case (le second est traité comme un échec ou repoussé, selon `concurrent.collision`).
-
-### 1.7 Cas limites de règles
-
-| Situation | Résolution |
-|---|---|
-| Plus assez de cases d'eau pour finir la manche | la piscine est réinitialisée (« refill ») et une nouvelle manche démarre, ou la partie s'arrête sur égalité — clé `pool.whenFull` : `refill` \| `draw` \| `suddenDeath` |
-| Joueur qui se déconnecte pendant son tour | tour compté comme échec ; s'il revient avant `rejoinGrace` (60 s) il reprend sa place, sinon il est éliminé |
-| Joueur qui atterrit sur le bord (hors région mais sur un bloc) | échec |
-| Joueur qui atterrit dans l'eau **hors** de la région définie | échec (l'eau hors arène ne compte pas) |
-| Deux derniers joueurs qui échouent au même tour (mode simultané) | égalité, aucun vainqueur |
-| Joueur qui triche (elytra, perle, bloc posé, vol) | tour annulé + échec, action loguée |
+Le sans-faute exige que la piscine soit réellement pleine, pas seulement que le joueur soit en
+vie : une partie interrompue affiche le bilan simple.
 
 ---
 
 ## 2. Cible technique
 
-| Élément | Choix | Vérifié |
-|---|---|---|
-| Serveur | **PaperMC 26.2** (`io.papermc.paper:paper-api:26.2.build.+`, dépôt `https://repo.papermc.io/repository/maven-public/`) | résolu en `26.2.build.112-stable` |
-| Java | **JDK 25** (obligatoire depuis Minecraft 26.1) | compilé avec Corretto 25.0.4 |
-| Build | Gradle (Kotlin DSL) + wrapper ; `com.gradleup.shadow` seulement quand des libs devront être embarquées (lot 3) | Gradle 9.7.1, `BUILD SUCCESSFUL`, 0 avertissement |
-| Manifeste | `plugin.yml` avec `api-version: '26.2'` — le chargement Bukkit historique reste supporté en 26.2 ; migration `paper-plugin.yml` possible plus tard | jar vérifié |
-| Texte | Adventure / **MiniMessage** (fourni par Paper) — aucune couleur `§` en dur | compile |
-| Commandes | `CommandExecutor` + `TabCompleter` déclarés dans `plugin.yml` ; Brigadier (`LifecycleEvents.COMMANDS`) au lot 2 si besoin de vrais types d'arguments | compile |
-| Dépendances optionnelles | WorldEdit (sélection de région), PlaceholderAPI (placeholders), Vault (récompenses économiques) | lots 3-4 |
-| Libs embarquées | HikariCP + driver SQLite/MySQL (uniquement si stockage SQL activé) | lot 3 |
+| Élément | Choix |
+|---|---|
+| Serveur | **PaperMC 26.2**, `io.papermc.paper:paper-api:26.2.build.112-stable` (version épinglée) |
+| Java | **JDK 25**, obligatoire depuis Minecraft 26.1 |
+| Build | Gradle 9.7.1 + wrapper, JUnit 5 pour les tests |
+| Manifeste | `plugin.yml`, `api-version: '26.2'` |
+| Texte | Adventure / MiniMessage, aucune couleur `§` en dur |
+| Commandes | `CommandExecutor` + `TabCompleter` |
 
-> Compatibilité confirmée par la compilation : `paper-api:26.2.build.112-stable` sous JDK 25,
-> aucune API dépréciée utilisée. Le jar produit (`build/libs/Thimble-0.2.0.jar`) embarque
-> `plugin.yml` (`api-version: '26.2'`), `config.yml` et `messages.yml`.
+**Bukkit n'est pas déprécié** : `paper-api` *est* l'API Bukkit augmentée, `org.bukkit.*` reste la
+surface principale de Paper 26.2. Vérifié dans le bytecode du jar de l'API — ni `CommandExecutor`,
+ni `PluginCommand`, ni `JavaPlugin#getCommand`, ni la section `commands:` du `plugin.yml` ne
+portent l'attribut `Deprecated` ; seul `JavaPluginLoader`, que nul plugin n'appelle, est marqué.
+Ce qui bouge est le *chargement* (`paper-plugin.yml` et Brigadier), sans calendrier de suppression
+annoncé. `JavaPlugin#registerCommand` permettrait de vrais types d'arguments Brigadier sans migrer
+le manifeste : un seul fichier à reprendre, le jour où ça vaut le coup.
 
-### 2.1 Arborescence du projet
+### 2.1 Arborescence
 
-Structure réelle après le lot 2 — un package plat, six classes. Le découpage en sous-packages
-(`arena/`, `game/`, `storage/`…) ne sera introduit que quand le lot 3 le rendra nécessaire.
+Un package plat, six classes. Le découpage en sous-packages n'apporterait rien tant que le volume
+reste celui-là.
 
-```
+```text
 Thimble/
 ├── build.gradle.kts · settings.gradle.kts · gradlew(.bat)
 ├── docs/SPECIFICATIONS.md
-└── src/main/
-    ├── java/fr/thimble/
-    │   ├── ThimblePlugin.java     # cycle de vie, arènes YAML, config, messages, boucle de tick
-    │   ├── Arena.java             # config d'arène + partie : états, tours, sauts, piscine
-    │   ├── ThimbleCommand.java    # /th et /th admin, avec complétion
-    │   ├── GameListener.java      # atterrissage, protections, déconnexion, choix du bonus
-    │   ├── Hud.java               # titres, sons, barre de boss, tableau de score, particules
-    │   └── PlayerSnapshot.java    # sauvegarde/restauration de l'état du joueur
-    └── resources/
-        ├── plugin.yml
-        ├── config.yml
-        └── messages.yml
+└── src/
+    ├── main/java/fr/thimble/
+    │   ├── ThimblePlugin.java   # cycle de vie, arènes, config, messages, tick, baguette, restaurations
+    │   ├── Arena.java           # configuration d'arène + partie en cours
+    │   ├── ThimbleCommand.java  # /th et /th admin, complétion
+    │   ├── GameListener.java    # gel, protections, connexion/déconnexion, clic droit
+    │   ├── Hud.java             # titres, sons, barre de boss, barre d'action, tableau de score, particules
+    │   └── PlayerSnapshot.java  # état du joueur, en mémoire et sur disque
+    ├── main/resources/          # plugin.yml, config.yml, messages.yml
+    └── test/java/fr/thimble/    # HudTest
 ```
 
 ---
 
-## 3. Modèle de données
+## 3. Machine à états
 
-```
-Arena
-  id: String (unique, [a-z0-9_-])
-  world: UUID
-  enabled: boolean
-  state: WAITING | STARTING | PLAYING | ENDING | RESETTING | DISABLED
-  waitLobby: Location          # lobby d'attente de l'arène
-  jumpSpot: Location           # plongeoir
-  spectatorSpot: Location      # point d'observation / retour après saut
-  pool: PoolRegion             # min/max (BlockVector3), surfaceY
-  minPlayers / maxPlayers: int (2..16, défaut 2..8)
-  lives: int (défaut 3)
-  mode: TURN | CONCURRENT
-  turnTimeoutSeconds: int (défaut 15)
-  palette: List<Material>      # blocs de couleur attribuables
-
-Game (runtime, 1 par arène active)
-  players: LinkedHashMap<UUID, ThimblePlayer>   # ordre de passage
-  round: int, turnIndex: int
-  snapshot: PoolSnapshot                        # blocs modifiés pour restauration
-  startedAt: Instant
-
-ThimblePlayer
-  uuid, name, block: Material, lives: int, alive: boolean
-  jumps: int, hits: int, thimbles: int, bestStreak: int
-  previous: PlayerSnapshot   # inventaire, xp, gamemode, vie, faim, effets, location
-
-PlayerStats (persisté)
-  uuid, gamesPlayed, wins, jumps, successfulJumps, thimbles, bestStreak, playtimeSeconds
-```
-
----
-
-## 4. Machine à états
-
-```
+```text
 DISABLED ──enable──▶ WAITING
-WAITING ──(≥ minPlayers)──▶ STARTING ──(countdown=0)──▶ PLAYING
-STARTING ──(< minPlayers)──▶ WAITING
-PLAYING  ──(1 survivant | 0 survivant | /th admin forcestop)──▶ ENDING
-ENDING   ──(délai fin, téléport, récompenses)──▶ RESETTING
-RESETTING ──(piscine restaurée)──▶ WAITING
+WAITING  ──(≥ min joueurs)──▶ STARTING ──(décompte)──▶ PLAYING
+STARTING ──(< min joueurs)──▶ WAITING
+PLAYING  ──(1 survivant | 0 survivant | forcestop | piscine pleine en solo)──▶ ENDING
+ENDING   ──(délai)──▶ WAITING          # les joueurs restent : la partie suivante s'enchaîne
+ENDING   ──(solo ou arène vide)──▶ WAITING, joueurs rendus à leur point de départ
 ```
 
-Sous-machine d'un tour (état `PLAYING`, mode `TURN`) :
-
-```
-TURN_PREPARE  → téléportation plongeoir, freeze, titre « À toi de jouer »
-TURN_ACTIVE   → joueur libéré, chrono lancé, suivi de la chute
-TURN_RESOLVE  → succès (pose du bloc / bonus) ou échec (perte de vie)
-TURN_NEXT     → joueur suivant, ou fin de manche
-```
+Un tour, dans `tickTurn()` : pause éventuelle → choix du bonus → gel sur le plongeoir → suivi de
+la chute et résolution → chrono. Tout est piloté par le tick, jamais par une tâche différée : un
+`forcestop` ou un rechargement ne peut donc pas laisser une action orpheline se déclencher dans la
+partie suivante.
 
 ---
 
-## 5. Règles techniques de détection
+## 4. Détection
 
-### 5.1 Atterrissage réussi
+### 4.1 Résolution du saut
 
-Écoute de `PlayerMoveEvent` (filtrée sur le seul sauteur actif, comparaison de blocs et non de
-positions pour éviter le coût) :
+Évaluée **à chaque tick**, pas sur `PlayerMoveEvent` : un joueur qui atterrit sur un bloc et lâche
+les touches n'émet plus aucun mouvement, son tour ne se terminait alors qu'à l'expiration du
+chrono. `PlayerMoveEvent` ne sert plus qu'à l'immobilisation.
 
-- le saut ne commence qu'une fois le joueur descendu sous le plongeoir (marge d'un bloc) ;
-- si la colonne des pieds est dans `pool` et que le bloc `(x, pool.surfaceY, z)` est
-  `Material.WATER` → **succès** ;
-- sinon, atterrissage sur un bloc → **échec**. Le test cherche un bloc solide sous les **quatre
-  coins de la hitbox**, et non sous le seul centre : un joueur posé sur le bord d'un bloc a un
-  centre qui surplombe la colonne voisine. `Player#isOnGround()` n'est pas une option : il est
-  renseigné par le client, donc falsifiable (et déprécié) ;
-- chute dans le vide (sous le fond de la piscine, ou sous la hauteur minimale du monde) → **échec** ;
-- tous les `EntityDamageEvent` des joueurs en partie sont **annulés** (le plugin gère lui-même
-  les vies) ; le joueur n'est jamais réellement tué.
+- le saut commence quand le joueur est descendu sous le plongeoir (marge d'un bloc) ;
+- colonne des pieds dans la région et bloc `(x, surfaceY, z)` en eau → **réussite** ;
+- bloc solide sous **l'un des quatre coins de la hitbox** → **échec**. Tester la seule colonne
+  centrale laissait passer un joueur immobilisé sur le bord d'un bloc, dont le centre surplombe la
+  case voisine : le tour restait en suspens et un pas vers l'eau transformait le raté en réussite ;
+- chute sous le fond de la piscine ou sous la hauteur minimale du monde → **échec** ;
+- `Player#isOnGround()` n'est pas une option : il est renseigné par le client, donc falsifiable
+  (et déprécié pour cette raison).
 
-### 5.2 Pose du bloc
+La fenêtre verticale de détection fait au minimum 4 blocs, y compris quand les deux coins sont
+posés au même niveau — sinon un joueur en chute rapide pouvait la traverser entre deux ticks.
 
-Le bloc d'eau touché (`x`, `surfaceY`, `z`) est remplacé par `player.block`, avec enregistrement du
-`BlockState` original dans `PoolSnapshot`. Le bloc n'est jamais posé par le joueur lui-même (tout
-`BlockPlaceEvent` en arène est annulé).
+### 4.2 Cases visées à la souris
 
-### 5.3 Détection du dé à coudre
+L'eau n'est pas un bloc solide : **le client n'envoie jamais de clic dessus**. La cible est donc
+calculée côté serveur par lancer de rayon avec `FluidCollisionMode.ALWAYS`, pour le choix du bonus
+comme pour la baguette de configuration. `RIGHT_CLICK_AIR` et `RIGHT_CLICK_BLOCK` sont acceptés
+tous les deux, le client envoyant l'un ou l'autre selon ce qui se trouve derrière l'eau — et le
+listener filtre `EquipmentSlot.HAND`, faute de quoi chaque clic compterait double, l'événement
+étant émis une fois par main.
 
-Après validation de la case `(x, z)`, on inspecte les voisins orthogonaux au niveau `surfaceY`
-(`neighbourMode: ORTHOGONAL | DIAGONAL`) : si aucun n'est de l'eau *appartenant à la piscine*,
-c'est un dé à coudre.
+### 4.3 Piscine
 
-### 5.4 Restauration de l'arène
+Les blocs posés sont journalisés avec leur état d'origine, ce qui sert à trois choses : la
+restauration en fin de partie, le sabotage (seuls ces blocs sont rouvrables), et la remise à neuf
+quand la piscine est pleine. Sans journal — après un redémarrage ou un crash — `restorePool()`
+repeint la surface à partir de la géométrie, sinon l'arène resterait bouchée pour toujours.
 
-`PoolSnapshot` contient uniquement les blocs modifiés. Restauration **asynchrone par lots**
-(`restore.blocksPerTick`, 200 par défaut) via `Block#setBlockData(data, false)` pour éviter les
-mises à jour physiques en cascade. Un snapshot est aussi persisté sur disque
-(`arenas/<id>.snapshot`) afin de pouvoir restaurer une arène après un crash serveur.
+### 4.4 Protections
 
-### 5.5 Protections en arène
-
-Annulés pour les joueurs en partie : `BlockPlaceEvent`, `BlockBreakEvent`, `PlayerDropItemEvent`,
-`InventoryClickEvent`, `EntityDamageByEntityEvent` (PvP), `FoodLevelChangeEvent`,
-`PlayerInteractEvent` (sauf items de menu), utilisation d'élytres / perles de l'Ender / chorus.
-Les joueurs sont en `GameMode.ADVENTURE` (spectateurs en `SPECTATOR`), invulnérables hors saut.
+En arène : pose, casse, drop, clic d'inventaire, faim et **tous** les dégâts sont annulés. Le
+joueur n'est jamais réellement tué, les vies sont comptées par le plugin. Les blocs sont posés
+sans émettre de `BlockPlaceEvent`, donc sans passer par WorldGuard — délibéré, mais à savoir. La
+protection de la région contre les joueurs **hors** arène relève d'un autre plugin.
 
 ---
 
-## 6. Commandes
+## 5. Commandes et permissions
 
-Préfixe : `/thimble`, alias `/th`.
-
-### 6.1 Joueur
-
-| Commande | Description | Permission |
+| Commande | Rôle | Permission |
 |---|---|---|
-| `/th join [arène]` | rejoint une arène (sans argument : l'arène libre la plus remplie) | `thimble.play` |
-| `/th leave` | quitte la partie / la file | `thimble.play` |
-| `/th list` | liste les arènes, leur état et le nombre de joueurs | `thimble.play` |
-| `/th spectate <arène>` | observe une partie en cours | `thimble.spectate` |
-| `/th stats [joueur]` | statistiques personnelles (ou d'un autre joueur) | `thimble.stats` / `thimble.stats.other` |
-| `/th top [victoires\|dés\|sauts]` | classement (10 premiers) | `thimble.stats` |
-| `/th help` | aide contextuelle | `thimble.play` |
+| `/th join [arène]` | rejoindre ; sans argument, l'arène libre la plus remplie | `thimble.play` |
+| `/th solo [arène]` | partie d'entraînement, démarrage immédiat | `thimble.play` |
+| `/th spectate <arène>` | observer | `thimble.spectate` |
+| `/th leave` · `/th list` · `/th help` | — | `thimble.play` |
+| `/th admin wand <arène>` | configuration guidée en 4 clics | `thimble.admin` |
+| `/th admin create\|delete <arène>` | — | `thimble.admin` |
+| `/th admin setwait\|setjump\|setspectator\|pos1\|pos2 <arène>` | placement à la position courante | `thimble.admin` |
+| `/th admin setsurface <arène> [y]` | forcer la surface de jeu | `thimble.admin` |
+| `/th admin set <arène> <min\|max\|lives\|timeout> <valeur>` | — | `thimble.admin` |
+| `/th admin palette <arène> <add\|remove\|clear\|list> [bloc]` | — | `thimble.admin` |
+| `/th admin enable\|disable\|info\|restore <arène>` | — | `thimble.admin` |
+| `/th admin forcestart\|forcestop <arène>` | — | `thimble.admin` |
+| `/th admin reload` | recharge config, messages et arènes | `thimble.admin` |
 
-### 6.2 Administration (`thimble.admin`)
+La **baguette** remplace la série de commandes de placement : quatre clics droits — coin, coin
+opposé, plongeoir, gradins — l'arène étant créée si besoin et activée au dernier clic si tout est
+cohérent. Les gradins fixent d'un geste le lobby d'attente et le point de retour, qui sont le même
+endroit dans la quasi-totalité des arènes ; `setwait` et `setspectator` permettent de les séparer.
 
-| Commande | Description |
+Un identifiant d'arène est validé (`[a-z0-9_-]{1,32}`) : Bukkit lit le point comme un séparateur
+de chemin, et `piscine.1` imbriquerait la section au point de faire disparaître l'arène au
+rechargement.
+
+---
+
+## 6. Fichiers
+
+| Fichier | Contenu |
 |---|---|
-| `/th admin create <arène>` | crée une arène vide (désactivée) |
-| `/th admin delete <arène>` | supprime une arène |
-| `/th admin setwait <arène>` | définit le lobby d'attente à la position courante |
-| `/th admin setjump <arène>` | définit le plongeoir |
-| `/th admin setspectator <arène>` | définit le point de retour / d'observation |
-| `/th admin setpool <arène>` | définit la piscine depuis la sélection WorldEdit (ou `pos1`/`pos2` internes) |
-| `/th admin setsurface <arène> [y]` | définit le niveau de surface (par défaut : Y courant) |
-| `/th admin set <arène> <min\|max\|lives\|mode\|timeout> <valeur>` | paramètres de partie |
-| `/th admin palette <arène> <add\|remove\|list> [bloc]` | gère les blocs de couleur |
-| `/th admin enable\|disable <arène>` | active / désactive l'arène (validation complète avant activation) |
-| `/th admin forcestart\|forcestop <arène>` | force le démarrage / l'arrêt |
-| `/th admin restore <arène>` | restaure manuellement la piscine |
-| `/th admin setlobby` | définit le lobby global (retour après partie) |
-| `/th admin reload` | recharge configuration et messages |
+| `config.yml` | durées, `refill-when-full`, palette par défaut, section `ui` |
+| `messages.yml` | tous les textes, en MiniMessage |
+| `arenas.yml` | une section par arène : positions, coins, réglages, palette |
+| `pending-restore.yml` | états de joueurs à rendre après une partie interrompue |
 
-Toutes les commandes sont **auto-complétées** (Brigadier) et vérifiées : activer une arène
-incomplète renvoie la liste précise des éléments manquants.
+Tout est en secondes dans `config.yml`, la conversion en ticks se fait au point d'usage. Les
+textes du jar servent de valeurs par défaut : une mise à jour qui ajoute des messages n'oblige pas
+à supprimer le fichier existant, et les personnalisations sont conservées.
 
-### 6.3 Permissions
-
-```
-thimble.play          (default: true)
-thimble.stats         (default: true)
-thimble.stats.other   (default: op)
-thimble.spectate      (default: true)
-thimble.admin         (default: op)   # implique toutes les sous-commandes admin
-thimble.join.full     (default: op)   # rejoindre une partie pleine (kick d'un joueur inactif)
-thimble.bypass.cooldown (default: op)
-```
+Une arène chargée passe par les mêmes bornes que la commande (`min ≥ 2`, `lives ≥ 1`,
+`timeout ≥ 3`) et n'est activée que si sa configuration est complète : un `arenas.yml` édité à la
+main ne peut plus produire un `timeout` nul ni une téléportation vers une position absente.
 
 ---
 
-## 7. Configuration
+## 7. Affichage
 
-### 7.1 `config.yml` (extrait)
-
-```yaml
-language: fr
-storage:
-  type: yaml            # yaml | sqlite | mysql
-  mysql: { host: localhost, port: 3306, database: thimble, user: root, password: "", pool-size: 5 }
-game:
-  countdown-seconds: 30
-  countdown-full-seconds: 5
-  end-delay-seconds: 8
-  freeze-ticks: 20
-  turn-timeout-seconds: 15
-  default-lives: 3
-  max-lives: 5
-  wait-as-spectator: true      # les retardataires observent au lieu d'être refusés
-  rejoin-grace-seconds: 60
-thimble:
-  neighbour-mode: ORTHOGONAL   # ORTHOGONAL | DIAGONAL
-  bonus: extra_block           # extra_block | extra_life | skip_turn | none
-pool:
-  when-full: refill            # refill | draw | sudden_death
-  restore-blocks-per-tick: 200
-rewards:
-  win: { money: 100, commands: ["give %player% diamond 1"] }
-  thimble: { money: 10, commands: [] }
-ui:
-  scoreboard: true
-  bossbar: true
-  titles: true
-  sounds: true
-```
-
-### 7.2 `arenas/<id>.yml`
-
-Sérialisation complète de l'objet `Arena` (monde, positions, région, paramètres, palette).
-Fichier par arène pour faciliter l'édition et l'export.
-
-### 7.3 `messages.yml`
-
-Tous les textes en **MiniMessage**, avec placeholders `<player>`, `<arena>`, `<lives>`,
-`<remaining>`, `<time>`. Fichiers `messages_fr.yml` / `messages_en.yml` fournis.
-
----
-
-## 8. Interface joueur
-
-- **Scoreboard** (pendant la partie) : nom de l'arène, manche, joueur en train de sauter, liste des
-  joueurs avec couleur et vies restantes, cases d'eau restantes.
-- **BossBar** : décompte avant démarrage, puis chrono du tour en cours.
-- **Titres / sous-titres** : « À toi de jouer », « Dé à coudre ! », « Raté ! — 2 vies restantes »,
-  « <joueur> remporte la partie ».
-- **Sons** : `BLOCK_NOTE_BLOCK_PLING` (tour), `ENTITY_PLAYER_LEVELUP` (dé à coudre),
-  `ENTITY_ITEM_BREAK` (échec), `UI_TOAST_CHALLENGE_COMPLETE` (victoire).
-- **Particules** : traînée pendant la chute (couleur du joueur), explosion de particules sur un dé
-  à coudre.
-- **Tab list** : préfixe coloré selon la couleur attribuée.
-- **Items de lobby** : boussole « choisir une arène », lit « quitter » (hotbar du lobby d'attente).
-
----
-
-## 9. Statistiques et persistance
-
-- Métriques suivies : parties jouées, victoires, sauts, sauts réussis (+ ratio), dés à coudre,
-  meilleure série de réussites, temps de jeu.
-- Backends : **YAML** (défaut, petits serveurs), **SQLite**, **MySQL** (réseaux multi-serveurs).
-- Toutes les E/S sont **asynchrones** ; cache mémoire par joueur connecté, écriture différée
-   (batch toutes les 60 s + à la déconnexion + à l'arrêt du plugin).
-- Placeholders PlaceholderAPI : `%thimble_wins%`, `%thimble_games%`, `%thimble_thimbles%`,
-  `%thimble_ratio%`, `%thimble_arena_<id>_state%`, `%thimble_arena_<id>_players%`.
-
----
-
-## 10. Contraintes non fonctionnelles
-
-| Contrainte | Exigence |
+| Canal | Contenu |
 |---|---|
-| Performance | aucune opération bloquante sur le thread principal ; restauration de piscine étalée sur plusieurs ticks ; `PlayerMoveEvent` filtré au bloc et au seul sauteur actif |
-| Concurrence | plusieurs arènes simultanées (limite configurable, 20 par défaut) sans interférence |
-| Robustesse | reprise après crash (snapshots persistés) ; `onDisable` remet tous les joueurs dans leur état d'origine et restaure les arènes |
-| Sécurité des données joueur | inventaire, XP, effets, mode de jeu et position sauvegardés à l'entrée, restaurés à la sortie (y compris en cas de kick, de reload ou d'arrêt serveur) |
-| Compatibilité | Paper 26.2+ ; dégradation propre si WorldEdit / PlaceholderAPI / Vault sont absents |
-| i18n | tous les textes externalisés, aucun texte en dur dans le code |
+| Tableau de score | joueurs avec carré de couleur, vies en cœurs, curseur sur le sauteur, éliminés barrés ; manche, eau restante, jauge, nom de l'arène |
+| Barre d'action | la consigne du moment : attente, ton tour, choix du bonus |
+| Barre de boss | décompte avant départ, chrono du tour (rouge sous 5 s), choix du bonus |
+| Titres | début de partie, ton tour, dé à coudre, raté (en cœurs), élimination, victoire |
+| Chat | les faits seulement : poses, dés à coudre, ratés, éliminations, podium |
+| Sons et particules | traînée pendant la chute, gerbe sur un dé à coudre |
+
+Chaque canal se désactive séparément dans la section `ui` de `config.yml`.
+
+La couleur d'un joueur vient de `DyeColor`, reconnue au préfixe du matériau (`RED_WOOL`,
+`BLUE_CONCRETE`…) : n'importe quelle palette teinte fonctionne sans table à maintenir.
+
+Deux limites du jeu, pas du plugin : une barre de boss n'a que six couleurs et l'or n'en fait pas
+partie, le bonus utilise donc le violet avec un texte doré ; et une barre d'action s'efface au
+bout de trois secondes, d'où le renvoi chaque seconde, greffé sur le rafraîchissement du tableau
+de score.
 
 ---
 
-## 11. Qualité et livraison
+## 8. Robustesse
 
-- Tests unitaires JUnit 5 sur la logique pure (ordre des tours, résolution d'un saut, détection du
-  dé à coudre, machine à états) — la logique de jeu est isolée de l'API Bukkit pour être testable.
-- Tests d'intégration avec MockBukkit sur les listeners et commandes.
-- CI GitHub Actions : build Gradle sur JDK 25, tests, publication de l'artefact.
-- Versionnage sémantique, `CHANGELOG.md`.
+**L'état du joueur est écrit sur disque dès l'entrée en arène.** Minecraft sauvegarde les joueurs
+toutes les cinq minutes : un crash en pleine partie graverait sinon l'inventaire vide, sans
+recours. Le fichier est relu à la connexion suivante, ce qui règle du même coup la position de
+retour — une téléportation pendant `PlayerQuitEvent` n'étant pas fiable.
 
-### Lots
+**Une arène qui lève une exception est isolée**, loguée et désactivée : sans cela elle arrêtait le
+tick de toutes les suivantes, vingt fois par seconde.
 
-| Lot | Contenu | Objectif |
-|---|---|---|
-| **L1 — MVP** | arènes (création/config/persistance), mode TURN, détection de saut, pose de bloc, vies, victoire, restauration, commandes joueur + admin, messages | jouable de bout en bout |
-| **L2 — Confort** | scoreboard, bossbar, titres, sons, particules, spectateurs, dé à coudre + bonus, reconnexion | expérience serveur public |
-| **L3 — Données** | statistiques, `top`, SQLite/MySQL, PlaceholderAPI, récompenses Vault | rétention et intégration réseau |
-| **L4 — Avancé** | mode CONCURRENT, sudden death, sélection WorldEdit, import/export d'arène, API pour plugins tiers | complétude |
+**Une déconnexion en partie garde la place** `rejoin-grace-seconds` : l'inventaire est rendu tout
+de suite, les tours du joueur absent sont sautés, et il reprend sa place s'il revient à temps.
+
+**`arenaOf(joueur)` est indexé**, pas parcouru : il est appelé à chaque paquet de mouvement de
+chaque joueur connecté, y compris ceux qui ne jouent pas.
 
 ---
 
-## 12. Points à valider
+## 9. Tests
 
-1. **Package / nom de domaine** : `fr.thimble` proposé — à confirmer.
-2. **Mode par défaut** : `TURN` (tour par tour) proposé.
-3. **Bonus du dé à coudre** : case supplémentaire au choix proposé.
-4. **Stockage par défaut** : YAML (SQLite si multi-arène intensif).
-5. **Périmètre du premier lot** : le L1 seul, ou L1 + L2 d'un bloc ?
-6. **Lobby global** : le plugin gère-t-il un hub (téléportation à la connexion), ou reste-t-il
-   strictement « arènes à la demande » ?
+`HudTest` couvre les cœurs, la jauge et le carré de couleur — la seule logique qui tourne sans
+serveur, puisqu'elle ne touche ni au monde ni aux joueurs. `paper-api` sur le classpath de test
+suffit, aucun simulateur n'est nécessaire.
+
+Le reste de la logique est lié à l'API Bukkit : sa vérification passe par un serveur. Rendre la
+partie testable hors serveur demanderait d'extraire l'ordre des tours et la géométrie de leurs
+dépendances Bukkit — utile le jour où cette logique se complexifiera, inutile avant.
+
+---
+
+## 10. Ce qui n'est pas fait
+
+| Sujet | Statut |
+|---|---|
+| Statistiques persistantes, `/th top`, records solo | non fait — écarté volontairement |
+| PlaceholderAPI, récompenses Vault, stockage SQL | non fait |
+| Mode simultané (tous les joueurs sautent en même temps) | non fait, le seul ajout de mode qui vaudrait le coup |
+| Mort subite | non fait |
+| Sélection WorldEdit | abandonné : la baguette fait le travail, sans dépendance, et gère l'eau |
+| Import/export d'arène | abandonné : `arenas.yml` est du texte, une section se copie |
+| API pour plugins tiers | abandonné tant que personne ne demande à s'y greffer |
+| Traînée de particules à la couleur du joueur | non fait |
+
+### Propositions écartées, et pourquoi
+
+**Compteur d'eau incrémental.** Un balayage coûte 49 lectures de blocs, une fois par seconde. Le
+compteur devrait être maintenu à quatre endroits, dont la réouverture de case du sabotage : on
+échangerait un coût nul contre une dérive silencieuse.
+
+**Cache des accesseurs de configuration.** `getConfig().getInt()` est une lecture de map. Sans
+mesure, c'est de l'optimisation à l'aveugle, et ça n'enlève aucune ligne.
+
+**Découpage d'`Arena` en trois classes.** Le plan de coupe est juste — configuration, piscine,
+partie — mais il ajoute un fichier et une couche de délégation sans supprimer une ligne. À faire
+au moment où la persistance sera retouchée, pas en commit isolé.
+
+**Balayage du segment de chute.** La vitesse terminale est de 3,92 blocs/tick et la fenêtre de
+détection en fait 4 : elle ne peut pas être franchie, et l'eau freine ensuite sur plusieurs ticks.
 
 ---
 
 ## Sources
 
 - [Java Edition 26.2 — Minecraft Wiki](https://minecraft.wiki/w/Java_Edition_26.2)
-- [Minecraft new version numbering system — Minecraft.net](https://www.minecraft.net/en-us/article/minecraft-new-version-numbering-system)
-- [Communauté:Dé à coudre — Le Minecraft Wiki (fr)](https://fr.minecraft.wiki/w/Communaut%C3%A9:D%C3%A9_%C3%A0_coudre)
-- [Thimble — SpigotMC](https://www.spigotmc.org/resources/thimble.88191/) et [syldium/Thimble — GitHub](https://github.com/syldium/Thimble)
-- [Project setup — PaperMC Docs](https://docs.papermc.io/paper/dev/project-setup/) · [plugin.yml — PaperMC Docs](https://docs.papermc.io/paper/dev/plugin-yml/)
-- [paper-api 26.2 javadoc](https://jd.papermc.io/paper/26.2/)
-
----
-
-## 13. Decisions validees et ecarts du lot 1
-
-Decisions (2026-08-19) : package `fr.thimble` · bonus du de a coudre = case supplementaire ·
-stockage YAML · premiere version = **jeu jouable, retours dans le chat** · le plugin gere
-**uniquement le mini-jeu** (aucun hub, le joueur revient exactement ou il etait).
-
-Ecarts assumes par rapport aux sections ci-dessus, a lever aux lots suivants :
-
-| Ecart | Raison | A faire |
-|---|---|---|
-| Commandes Bukkit classiques (`plugin.yml`) au lieu de Brigadier | chargement Bukkit toujours supporte en 26.2, API stable | migration Brigadier au lot 2 si besoin de vrais types d'arguments |
-| Restauration de la piscine synchrone | une piscine fait au plus quelques centaines de blocs | lots par tick si des arenes geantes apparaissent |
-| Pas de snapshot persiste sur disque | evite un format de fichier de plus | a ajouter si des crashs laissent des arenes sales |
-| Pas de statistiques ni de classement | lot 1 volontairement nu | lot 3 |
-| Region definie par `pos1`/`pos2` (position du joueur) | pas de dependance WorldEdit | adaptateur WorldEdit au lot 4 |
-
-### 13.1 Verification de compatibilite (2026-08-19)
-
-`gradlew build` sous **JDK 25 (Corretto 25.0.4)** avec **Gradle 9.7.1** :
-`io.papermc.paper:paper-api:26.2.build.+` resolu en **26.2.build.112-stable**, `BUILD SUCCESSFUL`,
-aucun avertissement de compilation ni d'API depreciee. Artefact : `build/libs/Thimble-0.2.0.jar`.
-
-Reste a valider **en jeu** sur un serveur Paper 26.2 : le comportement des sauts (detection
-d'atterrissage), la restauration de l'inventaire a la deconnexion, et le nettoyage de la piscine
-en fin de partie.
-
-### 13.2 Lot 2 livre (2026-08-19)
-
-| Element | Mise en oeuvre |
-|---|---|
-| Titres et sons | debut de partie, tour du joueur, touche, de a coudre, rate, elimination, victoire |
-| Barre de boss | decompte avant le demarrage, puis chrono du tour en cours |
-| Tableau de score | manche, joueur en train de sauter, liste des joueurs (vies, deconnectes, elimines), cases d'eau restantes ; rafraichi une fois par seconde |
-| Particules | trainee derriere le sauteur, gerbe sur un de a coudre |
-| Spectateurs | `/th spectate <arene>` ; un joueur qui rejoint une partie lancee la regarde (`game.wait-as-spectator`) ; les spectateurs recoivent tous les messages |
-| Bonus du de a coudre | le joueur **choisit** sa case : il vise et fait un clic droit, resolu par un lance de rayon serveur (`FluidCollisionMode.ALWAYS`). Sans choix dans le delai (`game.bonus-select-seconds`), une case est tiree au sort |
-| Reconnexion | la place est gardee `game.rejoin-grace-seconds` ; l'inventaire est rendu des la deconnexion, la partie saute les tours du joueur absent, qui reprend sa place s'il revient a temps |
-| Reglage | tout l'habillage est desactivable un par un dans la section `ui` de `config.yml` |
-
-Ecart restant : la trainee de particules n'est pas a la couleur du joueur (il faudrait une table
-bloc -> couleur qui suivrait toute palette personnalisee) ; elle utilise `END_ROD`.
-
-### 13.3 Baguette de configuration
-
-`/th admin wand <arene>` remplace la sequence de commandes de placement : le plugin remet une
-baguette et guide quatre clics droits (coin 1, coin 2, plongeoir, gradins). La cible est resolue
-par lancer de rayon serveur avec `FluidCollisionMode.ALWAYS`, seul moyen de designer une case
-d'eau : le client ne genere aucun clic sur un bloc non solide. L'arene est creee si besoin et
-activee au dernier clic si `Arena#missing()` est vide.
-
-Les gradins fixent d'un seul geste le lobby d'attente et le point de retour, qui sont le meme
-endroit dans la quasi-totalite des arenes ; `/th admin setwait` et `setspectator` permettent
-toujours de les separer.
-
-### 13.4 Retours de jeu (2026-08-19)
-
-| Demande | Mise en oeuvre |
-|---|---|
-| Decompte de 30 s trop long | `game.countdown-seconds` passe a 15 |
-| Ne pas teleporter tout de suite apres un saut reussi | pause de `game.splash-pause-seconds` (2 s) avant le retour aux gradins |
-| Retour immediat quand on tombe sur un bloc | la resolution du saut passe de `PlayerMoveEvent` a la boucle de tick |
-| Choix de la case bonus | le joueur est place en vol a `game.bonus-view-height` (12) blocs au-dessus du centre de la piscine, regard vers le bas, immobilise : seule la vue bouge |
-
-La resolution du saut ne pouvait pas rester sur `PlayerMoveEvent` : un joueur qui atterrit sur un
-bloc et ne bouge plus n'emet plus d'evenement de mouvement, son tour ne se terminait donc qu'au
-bout du chrono. La boucle de tick evalue desormais l'atterrissage a chaque tick, independamment
-des paquets du client ; `PlayerMoveEvent` ne sert plus qu'a l'immobilisation.
-
-### 13.5 Mode solo
-
-`/th solo [arene]` demarre une partie a un joueur sur une arene activee, libre et vide, sans
-decompte. Le mode est deduit a l'ouverture (`order.size() == 1`), pas configure : rien a regler
-cote arene, et une meme arene sert au solo comme au multijoueur.
-
-Trois regles changent :
-
-| Regle | Multijoueur | Solo |
-|---|---|---|
-| Fin de partie | au dernier survivant (`aliveCount() <= 1`) | quand le joueur n'a plus de vie (`aliveCount() <= 0`) |
-| Piscine pleine | remise a neuf (`refill-when-full`) | fin de partie, comptee comme une victoire |
-| Bilan | vainqueur annonce | cases remplies et des a coudre reussis |
-
-Le sans-faute exige que la piscine soit reellement pleine, pas seulement que le joueur soit encore
-en vie : une partie interrompue (deconnexion, `forcestop`) affiche le bilan simple.
-
-Les compteurs `hits` et `thimbles` vivent dans le siege du joueur, le temps de la partie. Leur
-persistance entre parties, et donc un vrai classement, restent le sujet du lot 3.
-
-### 13.6 Raté detecte par l'arret de la chute
-
-Le raté etait deduit du bloc situe sous le centre du joueur. Un joueur immobilise sur le **bord**
-d'un bloc a donc un centre qui surplombe la colonne voisine : ni le test d'eau (il est au-dessus
-de la surface), ni le test de sol (la colonne sous lui est vide) ne se declenchaient. Le tour
-restait en suspens, et il suffisait de se decaler vers l'eau pour transformer un raté en reussite,
-sans perdre de vie.
-
-Premiere correction tentee : deduire le raté de l'arret de la chute (trois ticks sans descendre,
-hors de l'eau). Elle reglait le cas signale mais deplacait le probleme sur l'axe du temps — un
-figement du client de plus de 150 ms en pleine chute suffisait a declarer un raté **en plein vol**,
-et la detection perdait son caractere immediat.
-
-Retenue a la place : tester les **quatre coins de la hitbox** du joueur, et non le seul centre. Un
-joueur pose sur le bord d'un bloc a forcement un coin au-dessus de ce bloc. Sans etat, sans seuil,
-sans sensibilite a la latence, et valable aussi pour les dalles, escaliers, barrieres et rebords.
-
-### 13.7 Passe d'optimisation
-
-| Point | Avant | Apres |
-|---|---|---|
-| `arenaOf(joueur)` | parcours de toutes les arenes, appele a chaque paquet de mouvement de chaque joueur connecte | index `Map<UUID, Arena>` tenu a jour a l'entree et a la sortie, O(1) |
-| `/th join`, `/th solo`, `/th spectate` | trois fois les memes gardes (joueur, deja en partie, resolution de l'arene) | `idlePlayer()`, `arenaArgument()`, `report()` partages |
-| `/th admin forcestart` | exigeait 2 joueurs, contredisant `min` et empechant de forcer un solo | demarre des qu'un joueur attend |
-| Unites | `freeze-ticks` en ticks, le reste en secondes ; accesseurs melangeant les deux | tout en secondes dans `config.yml`, conversion au seul point d'usage |
-
-`Arena#contains()` disparait, l'index le remplace. Les six endroits qui modifient `seats` ou
-`spectators` mettent tous l'index a jour ; `leave()` verifie d'abord que le joueur appartient bien
-a l'arene, pour qu'un appel croise ne puisse pas desindexer un joueur d'une autre partie.
-
-Ecart de configuration : `freeze-ticks: 20` devient `freeze-seconds: 1`. Un `config.yml` deja
-genere garde l'ancienne cle, qui est ignoree — la valeur par defaut vaut exactement l'ancien
-comportement, donc rien ne change a l'usage.
-
-### 13.8 Mises a jour sans perte
-
-`messages.yml` est charge a la main, il n'avait donc pas le filet que Bukkit tend automatiquement
-a `config.yml` : une cle ajoutee par une nouvelle version manquait au fichier deja present sur le
-serveur, et s'affichait en clair sous forme de cle brute. Il fallait supprimer le fichier a chaque
-mise a jour.
-
-Les textes du jar sont desormais poses en valeurs par defaut (`setDefaults`) : une cle absente du
-fichier de l'administrateur retombe sur celle du jar. Plus rien a supprimer lors d'une mise a
-jour, et les personnalisations sont conservees.
-
-### 13.9 Enchainement des parties et bonus de sabotage
-
-**Enchainement.** A la fin du delai de fin de partie, l'arene ne renvoie plus tout le monde a son
-point de depart : les sieges sont conserves, les vies et les compteurs remis a zero, la piscine
-restauree, et l'etat repasse en attente — le decompte de la partie suivante part donc tout seul.
-Sans cela, enchainer cinq parties demandait cinq `/th join`, la friction qui vide une arene le
-plus vite. Les joueurs deconnectes et les parties solo rendent la main comme avant.
-
-**Sabotage.** Le bonus du de a coudre offre desormais un choix : remplir une case d'eau, ou
-**rouvrir** un bloc deja pose. Seuls les blocs enregistres dans l'instantane de la partie sont
-concernes, ce qui rend le fond et les bords de la piscine intouchables sans ajouter la moindre
-verification de securite. Le bonus passe ainsi d'une strategie unique a un vrai choix : elargir
-pour survivre, ou fermer pour eliminer.
-
-### 13.10 Refonte de l'affichage
-
-| Element | Etat | Ce qui change |
-|---|---|---|
-| Tableau de score | refonte | carre a la couleur du bloc du joueur, vies en coeurs, curseur sur le sauteur, jauge de remplissage, nom de l'arene ; les lignes « Manche » et « Tour de » fusionnent en une seule |
-| Barre d'action | nouveau | consigne du moment, renvoyee chaque seconde : attente, ton tour, choix du bonus |
-| Barre de boss | nuances | rouge sous cinq secondes, violette pendant le choix du bonus |
-| Titres | resserrage | le sous-titre de raté montre des coeurs plutot qu'une phrase |
-| Chat | allegement | « au tour de » disparait (il vit dans la barre d'action et le tableau de score) et les lignes de jeu perdent le prefixe |
-| Podium | nouveau | classement complet en fin de partie, deduit de l'ordre d'elimination lu a l'envers |
-
-La couleur d'un joueur n'est pas une table codee en dur : elle vient de `DyeColor`, en reconnaissant
-le prefixe du materiau (`RED_WOOL`, `BLUE_CONCRETE`...). N'importe quelle palette teinte fonctionne
-donc sans rien declarer.
-
-Deux limites du jeu, pas du plugin : une barre de boss n'a que six couleurs, il n'y a pas d'or —
-le bonus utilise donc le violet, avec le texte en dore. Et la barre d'action s'efface au bout de
-trois secondes, d'ou le renvoi a chaque seconde, dans le meme rafraichissement que le tableau
-de score.
-
-### 13.11 Passe de robustesse
-
-Suite a une revue externe de la codebase, trois lots de corrections.
-
-**Pertes de donnees.** L'instantane du joueur est desormais ecrit dans `pending-restore.yml` des
-l'entree en arene et rendu a la connexion suivante : un crash serveur gravait jusqu'ici
-l'inventaire vide, puisque Minecraft sauvegarde les joueurs toutes les cinq minutes. La position
-de retour passe par le meme fichier, car une teleportation pendant `PlayerQuitEvent` n'est pas
-fiable. Et `restorePool()` sait reparer une piscine sans journal en memoire, en repeignant la
-surface a partir de la geometrie.
-
-**Coherence d'etat.** Le tour s'arrete si le delai de grace a termine la partie ; une arene qui
-leve est isolee, loguee et desactivee au lieu d'arreter le tick des suivantes ; un identifiant
-d'arene est valide avant creation, le point etant lu par Bukkit comme un separateur de chemin ;
-`load()` passe par `setValue()` et n'active plus une arene incomplete ; le choix du bonus est
-annule si celui qui choisit part ; un spectateur arrive en cours de partie prend un siege a la
-manche suivante.
-
-**Premier test.** `HudTest` couvre les coeurs, la jauge et le carre de couleur — la seule logique
-qui tourne sans serveur. Le classpath de test embarque `paper-api`, aucun simulateur n'est
-necessaire.
-
-Trois propositions de la revue ont ete ecartees : un compteur d'eau incremental (un balayage de
-49 blocs une fois par seconde ne coute rien, et le compteur devrait etre maintenu a quatre
-endroits), un cache des accesseurs de configuration (optimisation sans mesure), et le decoupage
-d'`Arena` en trois classes (le plan de coupe est juste, mais il n'enleve aucune ligne tant que le
-fichier tient sous ~1 200).
+- [Nouveau système de numérotation — Minecraft.net](https://www.minecraft.net/en-us/article/minecraft-new-version-numbering-system)
+- [Communauté:Dé à coudre — Minecraft Wiki FR](https://fr.minecraft.wiki/w/Communaut%C3%A9:D%C3%A9_%C3%A0_coudre)
+- [plugin.yml](https://docs.papermc.io/paper/dev/plugin-yml/) · [Paper plugins](https://docs.papermc.io/paper/reference/paper-plugins/) — PaperMC Docs
