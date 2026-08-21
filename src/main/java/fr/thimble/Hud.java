@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
@@ -23,7 +24,6 @@ import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.title.Title;
@@ -40,17 +40,15 @@ final class Hud {
     private final ThimblePlugin plugin;
     private final Map<String, BossBar> bars = new HashMap<>();
     private final Map<String, Scoreboard> boards = new HashMap<>();
+    /** Tableau de score que le joueur avait avant d'entrer : un autre plugin peut l'utiliser. */
+    private final Map<UUID, Scoreboard> previousBoards = new HashMap<>();
 
     Hud(ThimblePlugin plugin) {
         this.plugin = plugin;
     }
 
     void title(Player player, String key, String subKey, String... placeholders) {
-        TagResolver[] resolvers = new TagResolver[placeholders.length / 2];
-        for (int i = 0; i + 1 < placeholders.length; i += 2) {
-            resolvers[i / 2] = Placeholder.unparsed(placeholders[i], placeholders[i + 1]);
-        }
-        titleResolved(player, key, subKey, resolvers);
+        titleResolved(player, key, subKey, ThimblePlugin.resolvers(placeholders));
     }
 
     void titleResolved(Player player, String key, String subKey, TagResolver... resolvers) {
@@ -147,7 +145,10 @@ final class Hud {
             String entry = LegacyComponentSerializer.legacySection().serialize(lines.get(i)) + "§r".repeat(i);
             objective.getScore(entry).setScore(score--);
         }
-        viewers.forEach(player -> player.setScoreboard(board));
+        viewers.forEach(player -> {
+            previousBoards.putIfAbsent(player.getUniqueId(), player.getScoreboard());
+            player.setScoreboard(board);
+        });
     }
 
     /** Trainee de particules derriere le sauteur. */
@@ -168,7 +169,8 @@ final class Hud {
     /** Rend au joueur son tableau de score et retire les barres du plugin. */
     void clear(Player player) {
         bars.values().forEach(player::hideBossBar);
-        player.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
+        Scoreboard previous = previousBoards.remove(player.getUniqueId());
+        player.setScoreboard(previous != null ? previous : Bukkit.getScoreboardManager().getMainScoreboard());
     }
 
     void forget(Arena arena) {

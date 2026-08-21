@@ -8,11 +8,10 @@ Le dernier joueur en vie gagne.
 
 ## Compilation
 
-Requiert **JDK 25** (Minecraft 26.1+ l'impose). Un Corretto 25 est installé dans
-`C:\Users\AlexandreODIN\tools\jdk25.0.4_8`.
+Requiert **JDK 25** (Minecraft 26.1+ l'impose).
 
 ```powershell
-$env:JAVA_HOME = "C:\Users\AlexandreODIN\tools\jdk25.0.4_8"
+$env:JAVA_HOME = "<chemin vers un JDK 25>"
 .\gradlew.bat build      # -> build/libs/Thimble-0.2.0.jar
 ```
 

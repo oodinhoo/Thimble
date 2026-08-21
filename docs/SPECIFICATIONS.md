@@ -586,3 +586,31 @@ Deux limites du jeu, pas du plugin : une barre de boss n'a que six couleurs, il 
 le bonus utilise donc le violet, avec le texte en dore. Et la barre d'action s'efface au bout de
 trois secondes, d'ou le renvoi a chaque seconde, dans le meme rafraichissement que le tableau
 de score.
+
+### 13.11 Passe de robustesse
+
+Suite a une revue externe de la codebase, trois lots de corrections.
+
+**Pertes de donnees.** L'instantane du joueur est desormais ecrit dans `pending-restore.yml` des
+l'entree en arene et rendu a la connexion suivante : un crash serveur gravait jusqu'ici
+l'inventaire vide, puisque Minecraft sauvegarde les joueurs toutes les cinq minutes. La position
+de retour passe par le meme fichier, car une teleportation pendant `PlayerQuitEvent` n'est pas
+fiable. Et `restorePool()` sait reparer une piscine sans journal en memoire, en repeignant la
+surface a partir de la geometrie.
+
+**Coherence d'etat.** Le tour s'arrete si le delai de grace a termine la partie ; une arene qui
+leve est isolee, loguee et desactivee au lieu d'arreter le tick des suivantes ; un identifiant
+d'arene est valide avant creation, le point etant lu par Bukkit comme un separateur de chemin ;
+`load()` passe par `setValue()` et n'active plus une arene incomplete ; le choix du bonus est
+annule si celui qui choisit part ; un spectateur arrive en cours de partie prend un siege a la
+manche suivante.
+
+**Premier test.** `HudTest` couvre les coeurs, la jauge et le carre de couleur — la seule logique
+qui tourne sans serveur. Le classpath de test embarque `paper-api`, aucun simulateur n'est
+necessaire.
+
+Trois propositions de la revue ont ete ecartees : un compteur d'eau incremental (un balayage de
+49 blocs une fois par seconde ne coute rien, et le compteur devrait etre maintenu a quatre
+endroits), un cache des accesseurs de configuration (optimisation sans mesure), et le decoupage
+d'`Arena` en trois classes (le plan de coupe est juste, mais il n'enleve aucune ligne tant que le
+fichier tient sous ~1 200).

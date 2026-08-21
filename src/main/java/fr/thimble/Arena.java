@@ -109,7 +109,7 @@ final class Arena {
     }
 
     /** Les joueurs qui voient la partie : participants connectes et spectateurs. */
-    List<Player> viewers() {
+    private List<Player> viewers() {
         List<Player> viewers = new ArrayList<>();
         for (UUID uuid : seats.keySet()) {
             Player player = Bukkit.getPlayer(uuid);
@@ -925,7 +925,7 @@ final class Arena {
     }
 
     /** Nombre de cases de la surface de jeu, remplies ou non. */
-    int poolSize() {
+    private int poolSize() {
         if (!hasPool()) {
             return 0;
         }
@@ -949,7 +949,7 @@ final class Arena {
     }
 
     /** Les lignes de jeu vont au chat sans prefixe : dans l'arene, personne n'en a besoin. */
-    void broadcast(String key, String... placeholders) {
+    private void broadcast(String key, String... placeholders) {
         Component line = plugin.message(key, placeholders);
         viewers().forEach(player -> player.sendMessage(line));
     }
@@ -958,7 +958,7 @@ final class Arena {
     //  Piscine
     // ------------------------------------------------------------------
 
-    World world() {
+    private World world() {
         return corner1 != null ? corner1.getWorld() : null;
     }
 

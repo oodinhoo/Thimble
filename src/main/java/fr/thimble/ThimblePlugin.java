@@ -370,11 +370,16 @@ public final class ThimblePlugin extends JavaPlugin {
 
     /** @param placeholders paires cle/valeur : "player", "Alex", "lives", "2"... */
     Component message(String key, String... placeholders) {
+        return messageResolved(key, resolvers(placeholders));
+    }
+
+    /** Paires cle/valeur en balises MiniMessage, sans interpretation de la valeur. */
+    static TagResolver[] resolvers(String... placeholders) {
         TagResolver[] resolvers = new TagResolver[placeholders.length / 2];
         for (int i = 0; i + 1 < placeholders.length; i += 2) {
             resolvers[i / 2] = Placeholder.unparsed(placeholders[i], placeholders[i + 1]);
         }
-        return messageResolved(key, resolvers);
+        return resolvers;
     }
 
     Component messageResolved(String key, TagResolver... resolvers) {
