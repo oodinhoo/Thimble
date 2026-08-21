@@ -56,18 +56,9 @@ plugin dit ce qui manque.
 
 ### 3. Réglage fin (facultatif)
 
-Chaque point reste modifiable à la commande, en te plaçant à l'endroit voulu :
-
-```
-/th admin setwait|setjump|setspectator piscine1
-/th admin pos1|pos2 piscine1
-/th admin setsurface piscine1 [y]
-/th admin set piscine1 <min|max|lives|timeout> <valeur>
-/th admin palette piscine1 <add|remove|clear|list> [bloc]
-```
-
-La baguette pose un seul point pour l'attente et le retour ; ces commandes permettent de les
-séparer. La **surface de jeu** est le Y le plus haut des deux coins.
+Chaque point posé par la baguette reste modifiable à la commande, et les paramètres de partie —
+joueurs, vies, chrono, palette — se règlent au même endroit : voir [Commandes](#commandes).
+La **surface de jeu** est le Y le plus haut des deux coins.
 
 ### 4. Vérifier
 
@@ -126,6 +117,71 @@ secondes, et la fin de partie affiche le classement complet.
 
 Titres, sons, barre d'action, barre de boss, tableau de score et particules se désactivent un par
 un dans la section `ui` de `config.yml`.
+
+## Commandes
+
+`/thimble`, avec les alias `/th`, `/deacoudre` et `/dac`. Toutes les commandes se complètent à la
+touche tab, et `/th help` n'affiche les lignes d'administration qu'aux joueurs qui y ont droit.
+
+### Joueur — permission `thimble.play`
+
+| Commande | Rôle |
+|---|---|
+| `/th join [arène]` | Rejoint une partie. Sans argument, choisit l'arène libre **la plus remplie**, pour regrouper les joueurs plutôt que les éparpiller. Si la partie est déjà lancée, place en spectateur. |
+| `/th solo [arène]` | Partie d'entraînement, seul. Démarre immédiatement, sans décompte. Demande une arène **libre et vide**, donc échoue si quelqu'un attend déjà. |
+| `/th spectate <arène>` | Observe une partie. L'arène est obligatoire. Nécessite `thimble.spectate`. |
+| `/th leave` | Quitte la partie ou l'observation, et rend inventaire, mode de jeu et position d'origine. |
+| `/th list` | Liste les arènes avec leur état et leur nombre de joueurs. |
+| `/th help` | Aide, adaptée aux permissions. |
+
+### Administration — permission `thimble.admin`
+
+**Créer une arène**
+
+| Commande | Rôle |
+|---|---|
+| `/th admin wand <arène>` | Donne la baguette et guide les quatre clics. **C'est la voie normale** : crée l'arène si besoin et l'active à la fin. |
+| `/th admin create\|delete <arène>` | Crée une arène vide, ou la supprime. Le nom n'accepte que lettres, chiffres, tiret et underscore. |
+
+**Placer les points** — chaque commande enregistre *ta position actuelle*, orientation comprise.
+
+| Commande | Rôle |
+|---|---|
+| `/th admin setjump <arène>` | Le plongeoir. Le joueur y est téléporté à son tour, tourné comme tu l'étais. |
+| `/th admin setwait <arène>` | Le lobby d'attente, avant le début de la partie. |
+| `/th admin setspectator <arène>` | Le point de retour après chaque saut. La baguette le confond avec le lobby ; ces deux commandes permettent de les séparer. |
+| `/th admin pos1\|pos2 <arène>` | Les deux coins opposés de la piscine. **Place-toi dans l'eau** : c'est le bloc sous tes pieds qui est retenu. |
+| `/th admin setsurface <arène> [y]` | Force la surface de jeu. Sans argument, prend ton altitude actuelle. Utile si les deux coins ne sont pas au même niveau. |
+
+**Régler**
+
+| Commande | Rôle |
+|---|---|
+| `/th admin set <arène> min <n>` | Joueurs nécessaires pour lancer le décompte. Plancher : 2. |
+| `/th admin set <arène> max <n>` | Places disponibles. Au-delà de la taille de la palette, deux joueurs partageraient une couleur. |
+| `/th admin set <arène> lives <n>` | Vies par joueur. Plancher : 1. |
+| `/th admin set <arène> timeout <s>` | Secondes accordées pour résoudre un saut, chute comprise. Plancher : 3. |
+| `/th admin palette <arène> <add\|remove\|clear\|list> [bloc]` | Couleurs attribuées aux joueurs, dans l'ordre. Vide, l'arène reprend `default-palette` de `config.yml`. N'importe quel bloc teinté fonctionne : laine, béton, terre cuite, verre. |
+
+**Exploiter**
+
+| Commande | Rôle |
+|---|---|
+| `/th admin enable <arène>` | Rend l'arène jouable. Refuse tant qu'il manque quelque chose, et dit quoi. |
+| `/th admin disable <arène>` | Interrompt la partie en cours et retire l'arène du jeu. |
+| `/th admin info <arène>` | État, réglages, cases d'eau détectées, palette, et ce qui manque. **Le premier réflexe quand une arène ne se comporte pas comme prévu.** |
+| `/th admin restore <arène>` | Remet la piscine en eau. Fonctionne même après un redémarrage, où le plugin a perdu la trace des blocs posés. |
+| `/th admin forcestart <arène>` | Démarre sans attendre `min` joueurs. |
+| `/th admin forcestop <arène>` | Interrompt la partie et rend chacun à son point de départ. |
+| `/th admin reload` | Recharge `config.yml`, `messages.yml` et `arenas.yml`. **Arrête les parties en cours** : à éviter quand le serveur est peuplé. |
+
+### Permissions
+
+| Permission | Par défaut | Donne accès à |
+|---|---|---|
+| `thimble.play` | tout le monde | `join`, `solo`, `leave`, `list`, `help` |
+| `thimble.spectate` | tout le monde | `spectate` |
+| `thimble.admin` | opérateurs | `/th admin …` |
 
 ## Mettre à jour
 
