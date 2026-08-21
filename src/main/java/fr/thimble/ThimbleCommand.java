@@ -184,6 +184,10 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
             return;
         }
         String id = args[1].toLowerCase(Locale.ROOT);
+        if (!ThimblePlugin.validId(id)) {
+            plugin.send(sender, "arena.invalid-id", "value", args[1]);
+            return;
+        }
         Arena arena = plugin.arena(id);
         if (sub.equals("create")) {
             if (arena != null) {
@@ -226,8 +230,14 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
                 arena.restorePool();
                 plugin.send(sender, "arena.restored", "arena", id);
             }
-            case "forcestart" -> arena.forceStart();
-            case "forcestop" -> arena.forceStop();
+            case "forcestart" -> {
+                arena.forceStart();
+                plugin.send(sender, "arena.started-ok", "arena", id);
+            }
+            case "forcestop" -> {
+                arena.forceStop();
+                plugin.send(sender, "arena.stopped-ok", "arena", id);
+            }
             default -> help(sender);
         }
     }

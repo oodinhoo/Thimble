@@ -30,6 +30,9 @@ arena:
   list-entry: "<dark_gray>-</dark_gray> <white><arena></white> <gray>:</gray> <state> <dark_gray>(<white><players></white>/<white><max></white>)</dark_gray>"
   list-empty: "<gray>Aucune arene. Cree-en une avec <white>/th admin create <nom></white>.</gray>"
   palette-updated: "<green>Palette de <white><arena></white> : <white><palette></white></green>"
+  invalid-id: "<red><value> n'est pas un nom valide : lettres, chiffres, tiret et underscore, 32 au plus.</red>"
+  started-ok: "<green>Partie de <white><arena></white> lancee.</green>"
+  stopped-ok: "<yellow>Partie de <white><arena></white> interrompue.</yellow>"
   unknown-material: "<red><value> n'est pas un bloc valide.</red>"
   info: "<gray>Arene <white><arena></white> : etat=<state> <gray>joueurs=<white><min></white>-<white><max></white> vies=<white><lives></white> timeout=<white><timeout></white>s eau=<white><water></white> palette=<white><palette></white></gray>"
 

@@ -207,6 +207,9 @@ final class Arena {
         }
         plugin.untrack(uuid);
         plugin.hud().clear(player);
+        if (uuid.equals(bonusPicker)) {
+            clearBonus(player);
+        }
         PlayerSnapshot watching = spectators.remove(uuid);
         if (watching != null) {
             watching.restore(player);
@@ -234,6 +237,7 @@ final class Arena {
         } else if (state == State.STARTING && seats.size() < minPlayers) {
             state = State.WAITING;
             broadcast("game.countdown-cancelled");
+            plugin.hud().hideBar(this, viewers());
         }
     }
 
@@ -247,6 +251,9 @@ final class Arena {
         if (seat == null || state != State.PLAYING || !seat.alive || plugin.rejoinGraceSeconds() <= 0) {
             leave(player, true);
             return;
+        }
+        if (uuid.equals(bonusPicker)) {
+            clearBonus(player);
         }
         seat.snapshot.restore(player);
         seat.grace = plugin.rejoinGraceSeconds() * 20;
@@ -328,6 +335,17 @@ final class Arena {
             seat.thimbles = 0;
             prepare(player, GameMode.ADVENTURE, wait);
         }
+        // Un spectateur arrive en cours de partie entre vraiment en jeu a la manche suivante,
+        // sinon il resterait spectateur indefiniment.
+        for (UUID uuid : new ArrayList<>(spectators.keySet())) {
+            Player player = Bukkit.getPlayer(uuid);
+            if (player == null || seats.size() >= maxPlayers) {
+                continue;
+            }
+            spectators.remove(uuid);
+            seats.put(uuid, new Seat(PlayerSnapshot.capture(player)));
+            prepare(player, GameMode.ADVENTURE, wait);
+        }
         broadcast(seats.size() >= minPlayers ? "game.replay" : "game.replay-waiting",
                 "players", String.valueOf(seats.size()), "min", String.valueOf(minPlayers));
     }
@@ -406,6 +424,11 @@ final class Arena {
 
     private void tickTurn() {
         tickGrace();
+        if (state != State.PLAYING) {
+            // tickGrace() a pu terminer la partie : sans ce retour, le tour continuait
+            // et pouvait encore poser un bloc.
+            return;
+        }
         if (pending != null) {
             if (--pauseTicks <= 0) {
                 Runnable action = pending;
@@ -1117,17 +1140,16 @@ final class Arena {
     }
 
     void load(ConfigurationSection section) {
-        enabled = section.getBoolean("enabled");
         wait = section.getLocation("wait");
         jump = section.getLocation("jump");
         spectator = section.getLocation("spectator");
         corner1 = section.getLocation("pos1");
         corner2 = section.getLocation("pos2");
         surface = section.contains("surface") ? section.getInt("surface") : null;
-        minPlayers = section.getInt("min", 2);
-        maxPlayers = section.getInt("max", 8);
-        lives = section.getInt("lives", 3);
-        timeout = section.getInt("timeout", 15);
+        setValue("min", section.getInt("min", 2));
+        setValue("max", section.getInt("max", 8));
+        setValue("lives", section.getInt("lives", 3));
+        setValue("timeout", section.getInt("timeout", 15));
         palette.clear();
         for (String name : section.getStringList("palette")) {
             Material material = Material.matchMaterial(name);
@@ -1135,5 +1157,8 @@ final class Arena {
                 palette.add(material);
             }
         }
+        // Un fichier edite a la main peut declarer une arene active mais incomplete :
+        // elle planterait au premier /th join.
+        enabled = section.getBoolean("enabled") && missing().isEmpty();
     }
 }

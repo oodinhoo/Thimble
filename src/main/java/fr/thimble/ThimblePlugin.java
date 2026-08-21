@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -55,7 +56,20 @@ public final class ThimblePlugin extends JavaPlugin {
         ThimbleCommand command = new ThimbleCommand(this);
         Objects.requireNonNull(getCommand("thimble")).setExecutor(command);
         Objects.requireNonNull(getCommand("thimble")).setTabCompleter(command);
-        getServer().getScheduler().runTaskTimer(this, () -> arenas.values().forEach(Arena::tick), 1L, 1L);
+        getServer().getScheduler().runTaskTimer(this, this::tickArenas, 1L, 1L);
+    }
+
+    /** Une arene qui leve arreterait les suivantes, vingt fois par seconde : on l'isole. */
+    private void tickArenas() {
+        for (Arena arena : arenas.values()) {
+            try {
+                arena.tick();
+            } catch (RuntimeException e) {
+                getLogger().severe("Arene " + arena.id() + " desactivee apres une erreur : " + e);
+                arena.setEnabled(false);
+                saveArenas();
+            }
+        }
     }
 
     @Override
@@ -70,6 +84,7 @@ public final class ThimblePlugin extends JavaPlugin {
     void reload() {
         arenas.values().forEach(Arena::shutdown);
         arenas.clear();
+        setups.clear();
         reloadConfig();
         messages = YamlConfiguration.loadConfiguration(new File(getDataFolder(), "messages.yml"));
         // Les textes du jar servent de repli : une mise a jour qui ajoute des messages n'oblige
@@ -146,11 +161,16 @@ public final class ThimblePlugin extends JavaPlugin {
     }
 
     Arena arena(String id) {
-        return arenas.get(id.toLowerCase());
+        return arenas.get(id.toLowerCase(Locale.ROOT));
+    }
+
+    /** Bukkit lit le point comme un separateur de chemin : un tel identifiant imbriquerait la section. */
+    static boolean validId(String id) {
+        return id.matches("[a-z0-9_-]{1,32}");
     }
 
     Arena createArena(String id) {
-        Arena arena = new Arena(this, id.toLowerCase());
+        Arena arena = new Arena(this, id.toLowerCase(Locale.ROOT));
         arenas.put(arena.id(), arena);
         saveArenas();
         return arena;
@@ -181,6 +201,7 @@ public final class ThimblePlugin extends JavaPlugin {
 
     void untrack(UUID uuid) {
         byPlayer.remove(uuid);
+        setups.remove(uuid);
     }
 
     /** L'arene libre la plus remplie. */
