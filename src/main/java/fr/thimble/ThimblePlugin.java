@@ -40,12 +40,16 @@ public final class ThimblePlugin extends JavaPlugin {
     private YamlConfiguration messages;
     private Component prefix = Component.empty();
     private File arenasFile;
+    private File pendingFile;
+    private YamlConfiguration pending;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         saveResource("messages.yml", false);
         arenasFile = new File(getDataFolder(), "arenas.yml");
+        pendingFile = new File(getDataFolder(), "pending-restore.yml");
+        pending = YamlConfiguration.loadConfiguration(pendingFile);
         reload();
         getServer().getPluginManager().registerEvents(new GameListener(this), this);
         ThimbleCommand command = new ThimbleCommand(this);
@@ -97,6 +101,47 @@ public final class ThimblePlugin extends JavaPlugin {
             stored.save(arenasFile);
         } catch (IOException e) {
             getLogger().severe("Impossible d'enregistrer arenas.yml : " + e.getMessage());
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  Restaurations en attente
+    // ------------------------------------------------------------------
+
+    /**
+     * L'etat d'un joueur est ecrit sur disque des son entree en arene. Si le serveur tombe
+     * pendant la partie, sa sauvegarde vanilla contient un inventaire vide : c'est ce fichier
+     * qui le lui rend a sa prochaine connexion.
+     */
+    void remember(Player player, PlayerSnapshot snapshot) {
+        snapshot.save(pending.createSection(player.getUniqueId().toString()));
+        savePending();
+    }
+
+    void forget(UUID uuid) {
+        if (pending.contains(uuid.toString())) {
+            pending.set(uuid.toString(), null);
+            savePending();
+        }
+    }
+
+    /** @return true si le joueur avait un etat en attente, desormais rendu. */
+    boolean restorePending(Player player) {
+        ConfigurationSection section = pending.getConfigurationSection(player.getUniqueId().toString());
+        if (section == null) {
+            return false;
+        }
+        PlayerSnapshot.load(section).restore(player);
+        forget(player.getUniqueId());
+        getLogger().info("Etat de " + player.getName() + " restaure apres une partie interrompue.");
+        return true;
+    }
+
+    private void savePending() {
+        try {
+            pending.save(pendingFile);
+        } catch (IOException e) {
+            getLogger().severe("Impossible d'enregistrer pending-restore.yml : " + e.getMessage());
         }
     }
 

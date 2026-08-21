@@ -1,18 +1,21 @@
 package fr.thimble;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 
 /**
  * Etat d'un joueur avant qu'il entre en partie, restaure a sa sortie.
- * Rien n'est persiste sur disque : en cas de crash serveur l'inventaire du joueur
- * est celui de sa derniere sauvegarde vanilla.
+ * Ecrit aussi sur disque des la capture : Minecraft sauvegarde les joueurs toutes les cinq
+ * minutes, donc sans cela un crash en pleine partie graverait l'inventaire vide.
  */
 record PlayerSnapshot(Location location, GameMode gameMode, ItemStack[] inventory, int level, float exp,
         int foodLevel, float saturation, boolean allowFlight, boolean flying, boolean invulnerable,
@@ -33,6 +36,44 @@ record PlayerSnapshot(Location location, GameMode gameMode, ItemStack[] inventor
                 List.copyOf(player.getActivePotionEffects()));
     }
 
+    void save(ConfigurationSection section) {
+        section.set("location", location);
+        section.set("gamemode", gameMode.name());
+        section.set("inventory", Arrays.asList(inventory));
+        section.set("level", level);
+        section.set("exp", exp);
+        section.set("food", foodLevel);
+        section.set("saturation", saturation);
+        section.set("allow-flight", allowFlight);
+        section.set("flying", flying);
+        section.set("invulnerable", invulnerable);
+        section.set("effects", new ArrayList<>(effects));
+    }
+
+    static PlayerSnapshot load(ConfigurationSection section) {
+        List<?> stored = section.getList("inventory", List.of());
+        ItemStack[] inventory = stored.stream()
+                .map(item -> item instanceof ItemStack stack ? stack : null)
+                .toArray(ItemStack[]::new);
+        List<PotionEffect> effects = new ArrayList<>();
+        for (Object effect : section.getList("effects", List.of())) {
+            if (effect instanceof PotionEffect potion) {
+                effects.add(potion);
+            }
+        }
+        GameMode mode;
+        try {
+            mode = GameMode.valueOf(section.getString("gamemode", "SURVIVAL"));
+        } catch (IllegalArgumentException e) {
+            mode = GameMode.SURVIVAL;
+        }
+        return new PlayerSnapshot(section.getLocation("location"), mode, inventory,
+                section.getInt("level"), (float) section.getDouble("exp"),
+                section.getInt("food"), (float) section.getDouble("saturation"),
+                section.getBoolean("allow-flight"), section.getBoolean("flying"),
+                section.getBoolean("invulnerable"), effects);
+    }
+
     void restore(Player player) {
         player.getInventory().setContents(inventory);
         player.setGameMode(gameMode);
@@ -49,6 +90,8 @@ record PlayerSnapshot(Location location, GameMode gameMode, ItemStack[] inventor
             player.removePotionEffect(active.getType());
         }
         player.addPotionEffects(effects);
-        player.teleport(location);
+        if (location != null && location.getWorld() != null) {
+            player.teleport(location);
+        }
     }
 }

@@ -145,7 +145,9 @@ final class Arena {
         if (seats.size() >= maxPlayers) {
             return "game.full";
         }
-        seats.put(player.getUniqueId(), new Seat(PlayerSnapshot.capture(player)));
+        Seat seat = new Seat(PlayerSnapshot.capture(player));
+        seats.put(player.getUniqueId(), seat);
+        plugin.remember(player, seat.snapshot);
         plugin.track(player, this);
         prepare(player, GameMode.ADVENTURE, wait);
         broadcast("game.joined", "player", player.getName(),
@@ -179,7 +181,9 @@ final class Arena {
         if (!enabled) {
             return "arena.disabled";
         }
-        spectators.put(player.getUniqueId(), PlayerSnapshot.capture(player));
+        PlayerSnapshot snapshot = PlayerSnapshot.capture(player);
+        spectators.put(player.getUniqueId(), snapshot);
+        plugin.remember(player, snapshot);
         plugin.track(player, this);
         prepare(player, GameMode.SPECTATOR, spectator != null ? spectator : wait);
         plugin.send(player, "game.spectating", "arena", id);
@@ -206,6 +210,7 @@ final class Arena {
         PlayerSnapshot watching = spectators.remove(uuid);
         if (watching != null) {
             watching.restore(player);
+            plugin.forget(uuid);
             return;
         }
         Seat seat = seats.remove(uuid);
@@ -214,6 +219,7 @@ final class Arena {
         }
         order.remove(uuid);
         seat.snapshot.restore(player);
+        plugin.forget(uuid);
         if (announce) {
             broadcast("game.left", "player", player.getName(),
                     "players", String.valueOf(seats.size()), "max", String.valueOf(maxPlayers));
@@ -261,6 +267,7 @@ final class Arena {
         }
         seat.grace = 0;
         seat.snapshot = PlayerSnapshot.capture(player);
+        plugin.remember(player, seat.snapshot);
         prepare(player, seat.alive ? GameMode.ADVENTURE : GameMode.SPECTATOR,
                 spectator != null ? spectator : wait);
         broadcast("game.reconnected", "player", player.getName());
@@ -276,6 +283,7 @@ final class Arena {
             Player player = Bukkit.getPlayer(uuid);
             if (player != null && seat != null && seat.grace == 0) {
                 seat.snapshot.restore(player);
+                plugin.forget(uuid);
             }
         }
         for (UUID uuid : new ArrayList<>(spectators.keySet())) {
@@ -284,6 +292,7 @@ final class Arena {
             Player player = Bukkit.getPlayer(uuid);
             if (player != null && snapshot != null) {
                 snapshot.restore(player);
+                plugin.forget(uuid);
             }
         }
         resetGame();
@@ -988,9 +997,27 @@ final class Arena {
         block.setType(material, false);
     }
 
+    /**
+     * Remet la piscine en eau. Sans journal en memoire — apres un redemarrage ou un crash —
+     * la surface est repeinte a partir de la geometrie, sinon l'arene resterait bouchee.
+     */
     void restorePool() {
-        changed.forEach((block, data) -> block.setBlockData(data, false));
-        changed.clear();
+        if (!changed.isEmpty()) {
+            changed.forEach((block, data) -> block.setBlockData(data, false));
+            changed.clear();
+            return;
+        }
+        if (!hasPool()) {
+            return;
+        }
+        for (int x = Math.min(corner1.getBlockX(), corner2.getBlockX()); x <= Math.max(corner1.getBlockX(), corner2.getBlockX()); x++) {
+            for (int z = Math.min(corner1.getBlockZ(), corner2.getBlockZ()); z <= Math.max(corner1.getBlockZ(), corner2.getBlockZ()); z++) {
+                Block block = world().getBlockAt(x, surfaceY(), z);
+                if (block.getType() != Material.WATER) {
+                    block.setType(Material.WATER, false);
+                }
+            }
+        }
     }
 
     boolean hasPool() {

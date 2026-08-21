@@ -59,9 +59,10 @@ final class GameListener implements Listener {
         }
     }
 
-    /** Retour d'un joueur deconnecte pendant sa partie. */
+    /** Retour d'un joueur : on lui rend d'abord ce qu'une partie interrompue lui devait. */
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
+        plugin.restorePending(event.getPlayer());
         for (Arena arena : plugin.arenas()) {
             if (arena.reconnect(event.getPlayer())) {
                 return;
