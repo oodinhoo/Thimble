@@ -99,7 +99,7 @@ Thimble/
     │   ├── Hud.java             # titres, sons, barre de boss, barre d'action, tableau de score, particules
     │   └── PlayerSnapshot.java  # état du joueur, en mémoire et sur disque
     ├── main/resources/          # plugin.yml, config.yml, messages.yml
-    └── test/java/fr/thimble/    # HudTest
+    └── test/java/fr/thimble/    # HudTest, ArenaConfigTest
 ```
 
 ---
