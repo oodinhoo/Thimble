@@ -171,7 +171,7 @@ touche tab, et `/th help` n'affiche les lignes d'administration qu'aux joueurs q
 | `/th admin disable <arène>` | Interrompt la partie en cours et retire l'arène du jeu. |
 | `/th admin info <arène>` | État, réglages, cases d'eau détectées, palette, et ce qui manque. **Le premier réflexe quand une arène ne se comporte pas comme prévu.** |
 | `/th admin restore <arène>` | Remet la piscine en eau. Fonctionne même après un redémarrage, où le plugin a perdu la trace des blocs posés. |
-| `/th admin forcestart <arène>` | Démarre sans attendre `min` joueurs. |
+| `/th admin forcestart <arène>` | Démarre sans attendre : court-circuite le décompte en cours, ou lance la partie sans avoir atteint `min` joueurs. Refuse si l'arène est vide ou déjà en partie. |
 | `/th admin forcestop <arène>` | Interrompt la partie et rend chacun à son point de départ. |
 | `/th admin reload` | Recharge `config.yml`, `messages.yml` et `arenas.yml`. **Arrête les parties en cours** : à éviter quand le serveur est peuplé. |
 

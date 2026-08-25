@@ -31,6 +31,7 @@ arena:
   list-empty: "<gray>Aucune arene. Cree-en une avec <white>/th admin create <nom></white>.</gray>"
   palette-updated: "<green>Palette de <white><arena></white> : <white><palette></white></green>"
   invalid-id: "<red><value> n'est pas un nom valide : lettres, chiffres, tiret et underscore, 32 au plus.</red>"
+  start-failed: "<red>Impossible de lancer <white><arena></white> : il faut au moins un joueur, et aucune partie deja en cours.</red>"
   started-ok: "<green>Partie de <white><arena></white> lancee.</green>"
   stopped-ok: "<yellow>Partie de <white><arena></white> interrompue.</yellow>"
   unknown-material: "<red><value> n'est pas un bloc valide.</red>"

@@ -51,6 +51,12 @@ class ArenaConfigTest {
     }
 
     @Test
+    void forcerLeDemarrageDUneAreneVideEchoue() {
+        assertFalse(new Arena(null, "test").forceStart(),
+                "sans joueur il n'y a rien a lancer, et la commande ne doit pas annoncer le contraire");
+    }
+
+    @Test
     void identifiantDArene() {
         assertTrue(ThimblePlugin.validId("piscine1"));
         assertTrue(ThimblePlugin.validId("piscine_1-bis"));

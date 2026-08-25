@@ -230,10 +230,8 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
                 arena.restorePool();
                 plugin.send(sender, "arena.restored", "arena", id);
             }
-            case "forcestart" -> {
-                arena.forceStart();
-                plugin.send(sender, "arena.started-ok", "arena", id);
-            }
+            case "forcestart" -> plugin.send(sender,
+                    arena.forceStart() ? "arena.started-ok" : "arena.start-failed", "arena", id);
             case "forcestop" -> {
                 arena.forceStop();
                 plugin.send(sender, "arena.stopped-ok", "arena", id);

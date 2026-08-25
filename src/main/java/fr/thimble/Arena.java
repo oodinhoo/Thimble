@@ -357,10 +357,18 @@ final class Arena {
         shutdown();
     }
 
-    void forceStart() {
-        if (state == State.WAITING && !seats.isEmpty()) {
-            start();
+    /**
+     * Demarre sans attendre. Accepte aussi l'etat STARTING : c'est justement quand un decompte
+     * tourne qu'un administrateur veut le court-circuiter.
+     *
+     * @return false si l'arene est vide ou si une partie est deja en cours.
+     */
+    boolean forceStart() {
+        if (seats.isEmpty() || (state != State.WAITING && state != State.STARTING)) {
+            return false;
         }
+        start();
+        return true;
     }
 
     // ------------------------------------------------------------------
