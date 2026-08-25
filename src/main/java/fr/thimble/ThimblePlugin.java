@@ -152,6 +152,9 @@ public final class ThimblePlugin extends JavaPlugin {
         return true;
     }
 
+    // ponytail: un seul fichier reecrit en entier a chaque entree et sortie, donc O(joueurs en
+    // arene) par ecriture. Invisible en dessous d'une dizaine de joueurs simultanes ; passer a un
+    // fichier par joueur le jour ou plusieurs arenes tournent pleines en meme temps.
     private void savePending() {
         try {
             pending.save(pendingFile);
