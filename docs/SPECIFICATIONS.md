@@ -258,13 +258,23 @@ chaque joueur connecté, y compris ceux qui ne jouent pas.
 
 ## 9. Tests
 
-`HudTest` couvre les cœurs, la jauge et le carré de couleur — la seule logique qui tourne sans
-serveur, puisqu'elle ne touche ni au monde ni aux joueurs. `paper-api` sur le classpath de test
+Sept tests, sur ce qui ne touche ni au monde ni aux joueurs : `paper-api` sur le classpath de test
 suffit, aucun simulateur n'est nécessaire.
 
-Le reste de la logique est lié à l'API Bukkit : sa vérification passe par un serveur. Rendre la
-partie testable hors serveur demanderait d'extraire l'ordre des tours et la géométrie de leurs
-dépendances Bukkit — utile le jour où cette logique se complexifiera, inutile avant.
+| Test | Couvre |
+|---|---|
+| `HudTest` | cœurs, jauge en dix crans, carré de couleur y compris pour un bloc non teinté |
+| `ArenaConfigTest` | bornes des réglages, clé inconnue signalée, énumération de ce qui manque à une arène, validation des identifiants |
+
+**Le reste ne se teste pas hors serveur, et ce n'est pas un choix.** `forceStart()` finit par
+téléporter un joueur ; tout ce qui touche à la partie appelle `Bukkit`. Il faudrait un simulateur
+de serveur : MockBukkit s'arrête à la 1.21, rien n'existe pour la ligne 26.x.
+
+Extraire l'ordre des tours pour le rendre testable n'est pas la réponse : les deux vrais bugs de
+rotation rencontrés — un tour enchaîné deux fois, un tour qui continuait après la fin de partie —
+étaient dans les appelants, pas dans le calcul d'indice. Un test sur une rotation extraite ne les
+aurait pas vus. Ce qui les a trouvés, c'est la relecture, et ce qui les empêche de revenir, c'est
+d'avoir un seul endroit qui enchaîne un tour.
 
 ---
 
