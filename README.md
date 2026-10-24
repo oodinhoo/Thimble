@@ -1,230 +1,229 @@
 # Thimble
 
-Plugin pour serveur Minecraft permettant de créer et de jouer au mini jeu du "dé à coudre" (thimble)
+A Minecraft server plugin to build and play the "thimble" mini-game (*dé à coudre* in French).
 
-Chaque joueur saute à tour de rôle d'un plongeoir vers une piscine. Atterrir dans l'eau pose un bloc
-de sa couleur à l'endroit de l'impact — la piscine rétrécit à chaque saut. Rater coûte une vie.
-Le dernier joueur en vie gagne.
+Players take turns jumping from a diving board into a pool. Landing in the water places a block of
+their color where they hit — the pool shrinks with every jump. Missing costs a life. The last
+player alive wins.
 
-## Compilation
+In-game texts are in French; every one of them can be changed in `messages.yml`.
 
-Requiert **JDK 25** (Minecraft 26.1+ l'impose).
+## Building
+
+Requires **JDK 25** (mandatory since Minecraft 26.1).
 
 ```powershell
-$env:JAVA_HOME = "<chemin vers un JDK 25>"
+$env:JAVA_HOME = "<path to a JDK 25>"
 .\gradlew.bat build      # -> build/libs/Thimble-0.2.0.jar
 ```
 
-Compilé contre `io.papermc.paper:paper-api:26.2.build.112-stable` (Gradle 9.7.1, aucun
-avertissement). `.\gradlew.bat test` lance les tests. Déposer le jar dans `plugins/` d'un serveur
-**Paper 26.2**.
+Built against `io.papermc.paper:paper-api:26.2.build.112-stable` (Gradle 9.7.1, no warnings).
+`.\gradlew.bat test` runs the tests. Drop the jar into the `plugins/` folder of a **Paper 26.2**
+server.
 
-## Créer une arène
+## Creating an arena
 
-### 1. Construire la zone de jeu
+### 1. Build the play area
 
-| Élément | Recommandé |
+| Element | Recommended |
 |---|---|
-| Piscine | 7×7 blocs, **3 blocs de profondeur**, remplie d'eau source jusqu'au ras du bord |
-| Bord | blocs solides tout autour, rien qui dépasse au-dessus de la surface |
-| Plongeoir | plateforme 1×1 à 3×3, **20 à 30 blocs** au-dessus de l'eau, centrée sur la piscine |
-| Lobby d'attente | à côté, hors de la piscine |
-| Point spectateur | avec **vue sur la piscine** (c'est de là qu'on vise la case bonus) |
+| Pool | 7×7 blocks, **3 blocks deep**, filled with source water up to the rim |
+| Rim | solid blocks all around, nothing sticking out above the surface |
+| Diving board | 1×1 to 3×3 platform, **20 to 30 blocks** above the water, centered on the pool |
+| Waiting lobby | next to it, outside the pool |
+| Spectator point | with a **view of the pool** (the bonus block is aimed from there) |
 
-Seule la couche de surface compte : c'est là que les blocs se posent. Les couches du dessous
-restent en eau pour amortir la chute.
+Only the surface layer counts: that is where blocks are placed. The layers below stay water to
+break the fall.
 
-### 2. Déclarer l'arène — la baguette
+### 2. Declare the arena — the wand
 
 ```
-/th admin wand piscine1
+/th admin wand pool1
 ```
 
-Tu reçois une **baguette** (bâton de blaze) et quatre clics droits suffisent, dans l'ordre :
+You get a **wand** (blaze rod) and four right-clicks are enough, in this order:
 
-| Clic | Sur quoi viser |
+| Click | What to aim at |
 |---|---|
-| 1/4 | **l'eau**, à un coin de la piscine |
-| 2/4 | **l'eau**, au coin opposé |
-| 3/4 | le bloc du **plongeoir** (tu y seras téléporté à ton tour) |
-| 4/4 | le bloc des **gradins** (attente avant la partie et retour après chaque saut) |
+| 1/4 | **the water**, at one corner of the pool |
+| 2/4 | **the water**, at the opposite corner |
+| 3/4 | the **diving board** block (players are teleported there on their turn) |
+| 4/4 | the **stands** block (waiting before the game and return point after each jump) |
 
-Pas besoin de te déplacer : la case visée est calculée par lancer de rayon côté serveur, l'eau
-comprise — le client, lui, ne permet jamais de cliquer sur de l'eau. L'arène est créée si elle
-n'existe pas, puis **activée automatiquement** au dernier clic si tout est cohérent ; sinon le
-plugin dit ce qui manque.
+No need to move: the targeted block is found by a server-side ray trace, water included — the
+client itself never lets you click on water. The arena is created if it does not exist, then
+**enabled automatically** on the last click if everything is consistent; otherwise the plugin says
+what is missing.
 
-### 3. Réglage fin (facultatif)
+### 3. Fine-tuning (optional)
 
-Chaque point posé par la baguette reste modifiable à la commande, et les paramètres de partie —
-joueurs, vies, chrono, palette — se règlent au même endroit : voir [Commandes](#commandes).
-La **surface de jeu** est le Y le plus haut des deux coins.
+Every point placed by the wand can still be changed by command, and game settings — players,
+lives, timer, palette — are set in the same place: see [Commands](#commands). The **playing
+surface** is the highest Y of the two corners.
 
-### 4. Vérifier
+### 4. Check
 
-`/th admin info piscine1` affiche l'état, les réglages, le nombre de cases d'eau détectées et ce
-qui manque encore. Une 7×7 correctement posée affiche `eau=49`. Si `eau=0`, la surface est mal
-placée.
+`/th admin info pool1` shows the state, the settings, the number of water blocks detected and what
+is still missing. A correctly placed 7×7 shows `eau=49` (water=49). If `eau=0`, the surface is in
+the wrong place.
 
-### Pièges courants
+### Common pitfalls
 
-- **`eau=0`** : la surface tombe à côté de l'eau — repose `pos1` en étant *dans* l'eau du bord.
-- **Eau courante** au lieu d'eau source : les blocs d'eau qui coulent ne comptent pas.
-- **Un bloc au-dessus de la piscine** (surplomb, plafond) : le joueur atterrit dessus, c'est un raté.
-- **Point spectateur sans vue** sur la piscine : le bonus du dé à coudre devient invisible à viser.
-- Il faut **2 joueurs minimum** pour lancer une partie : le principe même du jeu est le dernier en
-  vie, `min` ne descend pas sous 2.
+- **`eau=0`**: the surface misses the water — set `pos1` again while standing *in* the edge water.
+- **Flowing water** instead of source water: flowing water blocks do not count.
+- **A block above the pool** (overhang, ceiling): players land on it, which counts as a miss.
+- **Spectator point without a view** of the pool: the thimble bonus becomes impossible to aim.
+- At least **2 players** are needed to start a game: the whole point is being the last one
+  standing, `min` cannot go below 2.
 
-## Jouer
+## Playing
 
 ```
-/th join [arène]       # sans argument : l'arène libre la plus remplie
-/th solo [arène]       # partie d'entraînement, seul
-/th spectate <arène>   # observer une partie en cours
+/th join [arena]       # no argument: the fullest free arena
+/th solo [arena]       # practice game, alone
+/th spectate <arena>   # watch a running game
 /th leave
 /th list
 ```
 
-Une **pancarte** peut servir de bouton de jonction : `[Thimble]` en première ligne, le nom de
-l'arène en seconde (laissée vide = l'arène libre la plus remplie). Un clic droit dessus rejoint,
-sans taper de commande. C'est une bascule : re-cliquer alors qu'on est déjà en partie fait quitter,
-comme `/th leave`.
+A **sign** can act as a join button: `[Thimble]` on the first line, the arena name on the second
+(left empty = the fullest free arena). Right-clicking it joins without typing a command. It is a
+toggle: clicking again while in a game leaves it, like `/th leave`.
 
-**Mode solo** : démarre immédiatement, sans décompte ni adversaire, sur une arène libre et vide.
-Le but est de remplir toute la piscine sans épuiser ses vies. La partie s'arrête à court de vies —
-le bilan donne le nombre de cases remplies et de dés à coudre — ou en victoire si la dernière case
-d'eau est bouchée. Contrairement au multijoueur, la piscine n'est jamais remise à neuf en cours de
-partie : c'est justement ce qui fait le score.
+**Solo mode**: starts right away, with no countdown and no opponent, on a free and empty arena. The
+goal is to fill the whole pool without running out of lives. The game stops when lives run out —
+the summary gives the number of blocks filled and thimbles landed — or ends in a win when the last
+water block is filled. Unlike multiplayer, the pool is never refilled during the game: that is
+precisely what makes the score.
 
-La partie démarre seule dès `min` joueurs (15 s de décompte, 5 s si l'arène est pleine). Rejoindre
-une partie déjà lancée place le joueur en spectateur.
+A game starts on its own once `min` players are in (15 s countdown, 5 s if the arena is full).
+Joining a game already running puts the player in spectator mode.
 
-Après un saut réussi, le joueur reste 2 secondes dans l'eau avant de repartir aux gradins ; un
-saut manqué renvoie immédiatement.
+After a successful jump, the player stays 2 seconds in the water before going back to the stands; a
+missed jump sends them back immediately.
 
-Après un **dé à coudre** (atterrissage dans un trou de 1×1), le joueur est placé en vol au-dessus
-de la piscine, regard plongeant et immobile — seule la vue bouge. Il a 8 secondes pour faire un
-clic droit, au choix, sur une **case d'eau** (elle se remplit) ou sur un **bloc déjà posé** (elle
-se rouvre). Seuls les blocs posés pendant la partie peuvent être rouverts, jamais le fond ni les
-bords de la piscine.
+After a **thimble** (landing in a 1×1 hole), the player is put in flight above the pool, looking
+down and frozen — only the view moves. They have 8 seconds to right-click either a **water block**
+(it gets filled) or a **block already placed** (it gets reopened). Only blocks placed during the
+game can be reopened, never the floor or the edges of the pool.
 
-À la fin d'une partie, les joueurs **restent dans l'arène** : un nouveau décompte démarre tout
-seul, sans avoir à retaper `/th join`. `/th leave` pour sortir. Une partie solo, elle, rend la
-main à la fin.
+When a game ends, players **stay in the arena**: a new countdown starts on its own, without typing
+`/th join` again. `/th leave` to get out. A solo game releases the player at the end.
 
-Une déconnexion en pleine partie garde la place 60 secondes ; l'inventaire est rendu
-immédiatement. Si le serveur tombe pendant une partie, l'inventaire et la position d'origine sont
-rendus à la connexion suivante — ils sont écrits sur disque dès l'entrée en arène.
+Disconnecting mid-game keeps the seat for 60 seconds; the inventory is returned immediately. If the
+server goes down during a game, the original inventory and position are returned on the next login
+— they are written to disk as soon as the player enters the arena.
 
-Pendant la partie : le tableau de score donne les joueurs avec leur couleur et leurs vies en cœurs,
-la barre d'action rappelle la consigne du moment, la barre de boss passe au rouge sous cinq
-secondes, et la fin de partie affiche le classement complet. La couleur attribuée à chaque joueur
-teinte aussi son point sur la barre de localisation (le « radar ») et son nom au-dessus de la tête,
-et la traînée de particules de sa chute. Un joueur **en attente de son tour** est retenu au bord de
-la piscine, pour ne pas y tomber et fausser une détection.
+During the game: the scoreboard lists players with their color and their lives as hearts, the action
+bar shows the current instruction, the boss bar turns red under five seconds, and the end of the
+game shows the full ranking. Each player's color also tints their dot on the locator bar (the
+"radar"), their name tag and the particle trail of their fall. A player **waiting for their turn** is
+held at the edge of the pool, so they cannot fall in and disrupt detection.
 
-Titres, sons, barre d'action, barre de boss, tableau de score, particules, panneau de classement
-(`leaderboard`) et couleur radar (`radar`) se désactivent un par un dans la section `ui` de
-`config.yml`.
+Titles, sounds, action bar, boss bar, scoreboard, particles, leaderboard panel (`leaderboard`) and
+radar color (`radar`) can each be turned off in the `ui` section of `config.yml`.
 
-## Classement
+## Leaderboard
 
-Un **panneau flottant** affiche le classement persistant du serveur — victoires et dés à coudre,
-TOP réglable (`leaderboard.size`) — et le résultat de la dernière partie. Place-toi à l'endroit
-voulu, regarde dans la bonne direction, puis `/th admin setboard` ; `/th admin clearboard` le
-retire, et le reposer ailleurs déplace l'ancien.
+A **floating panel** shows the server's persistent leaderboard — wins and thimbles, configurable TOP
+size (`leaderboard.size`) — and the result of the last game. Stand where you want it, face the right
+direction, then `/th admin setboard`; `/th admin clearboard` removes it, and setting it elsewhere
+moves the old one.
 
-Il se met à jour à la fin de chaque partie **multijoueur terminée normalement**. Le solo (c'est de
-l'entraînement), les parties interrompues par `forcestop` et celles gagnées parce que tous les
-adversaires sont partis ne comptent pas. Les stats vivent dans
-`stats.yml` et survivent aux redémarrages ; `ui.leaderboard: false` masque le panneau sans cesser
-de compter.
+It updates at the end of every **multiplayer game that ends normally**. Solo games (they are
+practice), games stopped with `forcestop` and games won because every opponent left do not count.
+Stats live in `stats.yml` and survive restarts; `ui.leaderboard: false` hides the panel but keeps
+counting.
 
-## Commandes
+## Commands
 
-`/thimble`, avec les alias `/th`, `/deacoudre` et `/dac`. Toutes les commandes se complètent à la
-touche tab, et `/th help` n'affiche les lignes d'administration qu'aux joueurs qui y ont droit.
+`/thimble`, with the aliases `/th`, `/deacoudre` and `/dac`. Every command tab-completes, and
+`/th help` only shows the admin lines to players allowed to use them.
 
-### Joueur — permission `thimble.play`
+### Player — permission `thimble.play`
 
-| Commande | Rôle |
+| Command | Role |
 |---|---|
-| `/th join [arène]` | Rejoint une partie. Sans argument, choisit l'arène libre **la plus remplie**, pour regrouper les joueurs plutôt que les éparpiller. Si la partie est déjà lancée, place en spectateur. |
-| `/th solo [arène]` | Partie d'entraînement, seul. Démarre immédiatement, sans décompte. Demande une arène **libre et vide**, donc échoue si quelqu'un attend déjà. |
-| `/th spectate <arène>` | Observe une partie. L'arène est obligatoire. Nécessite `thimble.spectate`. |
-| `/th leave` | Quitte la partie ou l'observation, et rend inventaire, mode de jeu et position d'origine. |
-| `/th list` | Liste les arènes avec leur état et leur nombre de joueurs. |
-| `/th help` | Aide, adaptée aux permissions. |
+| `/th join [arena]` | Joins a game. Without an argument, picks the **fullest** free arena, to group players rather than scatter them. If the game is already running, joins as a spectator. |
+| `/th solo [arena]` | Practice game, alone. Starts immediately, without countdown. Needs a **free and empty** arena, so it fails if someone is already waiting. |
+| `/th spectate <arena>` | Watches a game. The arena is required. Needs `thimble.spectate`. |
+| `/th leave` | Leaves the game or spectating, and returns the original inventory, game mode and position. |
+| `/th list` | Lists arenas with their state and player count. |
+| `/th help` | Help, adapted to permissions. |
 
 ### Administration — permission `thimble.admin`
 
-**Créer une arène**
+**Create an arena**
 
-| Commande | Rôle |
+| Command | Role |
 |---|---|
-| `/th admin wand <arène>` | Donne la baguette et guide les quatre clics. **C'est la voie normale** : crée l'arène si besoin et l'active à la fin. |
-| `/th admin create\|delete <arène>` | Crée une arène vide, ou la supprime. Le nom n'accepte que lettres, chiffres, tiret et underscore. |
+| `/th admin wand <arena>` | Gives the wand and guides the four clicks. **This is the normal way**: creates the arena if needed and enables it at the end. |
+| `/th admin create\|delete <arena>` | Creates an empty arena, or deletes it. The name only accepts letters, digits, dash and underscore. |
 
-**Placer les points** — chaque commande enregistre *ta position actuelle*, orientation comprise.
+**Place the points** — each command records *your current position*, facing included.
 
-| Commande | Rôle |
+| Command | Role |
 |---|---|
-| `/th admin setjump <arène>` | Le plongeoir. Le joueur y est téléporté à son tour, tourné comme tu l'étais. |
-| `/th admin setwait <arène>` | Le lobby d'attente, avant le début de la partie. |
-| `/th admin setspectator <arène>` | Le point de retour après chaque saut. La baguette le confond avec le lobby ; ces deux commandes permettent de les séparer. |
-| `/th admin pos1\|pos2 <arène>` | Les deux coins opposés de la piscine. **Place-toi dans l'eau** : c'est le bloc sous tes pieds qui est retenu. |
-| `/th admin setsurface <arène> [y]` | Force la surface de jeu. Sans argument, prend ton altitude actuelle. Utile si les deux coins ne sont pas au même niveau. |
+| `/th admin setjump <arena>` | The diving board. Players are teleported there on their turn, facing the way you were. |
+| `/th admin setwait <arena>` | The waiting lobby, before the game starts. |
+| `/th admin setspectator <arena>` | The return point after each jump. The wand sets it to the same spot as the lobby; these two commands let you separate them. |
+| `/th admin pos1\|pos2 <arena>` | The two opposite corners of the pool. **Stand in the water**: the block under your feet is the one recorded. |
+| `/th admin setsurface <arena> [y]` | Forces the playing surface. Without an argument, uses your current height. Useful if the two corners are not at the same level. |
 
-**Régler**
+**Settings**
 
-| Commande | Rôle |
+| Command | Role |
 |---|---|
-| `/th admin set <arène> min <n>` | Joueurs nécessaires pour lancer le décompte. Plancher : 2. |
-| `/th admin set <arène> max <n>` | Places disponibles. Au-delà de la taille de la palette, deux joueurs partageraient une couleur. |
-| `/th admin set <arène> lives <n>` | Vies par joueur. Plancher : 1. |
-| `/th admin set <arène> timeout <s>` | Secondes accordées pour résoudre un saut, chute comprise. Plancher : 3. |
-| `/th admin palette <arène> <add\|remove\|clear\|list> [bloc]` | Couleurs attribuées aux joueurs, dans l'ordre. Vide, l'arène reprend `default-palette` de `config.yml`. N'importe quel bloc teinté fonctionne : laine, béton, terre cuite, verre. |
+| `/th admin set <arena> min <n>` | Players needed to start the countdown. Minimum: 2. |
+| `/th admin set <arena> max <n>` | Available seats. Beyond the palette size, two players would share a color. |
+| `/th admin set <arena> lives <n>` | Lives per player. Minimum: 1. |
+| `/th admin set <arena> timeout <s>` | Seconds allowed to complete a jump, fall included. Minimum: 3. |
+| `/th admin palette <arena> <add\|remove\|clear\|list> [block]` | Colors given to players, in order. When empty, the arena uses `default-palette` from `config.yml`. Any dyed block works: wool, concrete, terracotta, glass. |
 
-**Exploiter**
+**Operations**
 
-| Commande | Rôle |
+| Command | Role |
 |---|---|
-| `/th admin enable <arène>` | Rend l'arène jouable. Refuse tant qu'il manque quelque chose, et dit quoi. |
-| `/th admin disable <arène>` | Interrompt la partie en cours et retire l'arène du jeu. |
-| `/th admin info <arène>` | État, réglages, cases d'eau détectées, palette, et ce qui manque. **Le premier réflexe quand une arène ne se comporte pas comme prévu.** |
-| `/th admin restore <arène>` | Remet la piscine en eau. Fonctionne même après un redémarrage, où le plugin a perdu la trace des blocs posés. |
-| `/th admin forcestart <arène>` | Démarre sans attendre : court-circuite le décompte en cours, ou lance la partie sans avoir atteint `min` joueurs. Refuse si l'arène est vide ou déjà en partie. |
-| `/th admin forcestop <arène>` | Interrompt la partie et rend chacun à son point de départ. |
-| `/th admin reload` | Recharge `config.yml`, `messages.yml` et `arenas.yml`. **Arrête les parties en cours** : à éviter quand le serveur est peuplé. |
+| `/th admin enable <arena>` | Makes the arena playable. Refuses as long as something is missing, and says what. |
+| `/th admin disable <arena>` | Stops the running game and takes the arena out of play. |
+| `/th admin info <arena>` | State, settings, water blocks detected, palette, and what is missing. **The first thing to check when an arena does not behave as expected.** |
+| `/th admin restore <arena>` | Refills the pool with water. Works even after a restart, when the plugin has lost track of placed blocks. |
+| `/th admin forcestart <arena>` | Starts without waiting: skips the running countdown, or starts the game before `min` players are in. Refuses if the arena is empty or already playing. |
+| `/th admin forcestop <arena>` | Stops the game and sends everyone back to where they started. |
+| `/th admin reload` | Reloads `config.yml`, `messages.yml` and `arenas.yml`. **Stops running games**: avoid it while the server is busy. |
 
-**Classement** — ces deux commandes ne prennent pas d'arène : le panneau est unique pour le serveur.
+**Leaderboard** — these two commands take no arena: there is one panel per server.
 
-| Commande | Rôle |
+| Command | Role |
 |---|---|
-| `/th admin setboard` | Pose le panneau de classement flottant à ta position, orientation comprise. Le déplace s'il existait ailleurs. |
-| `/th admin clearboard` | Retire le panneau. |
+| `/th admin setboard` | Places the floating leaderboard panel at your position, facing included. Moves it if it existed elsewhere. |
+| `/th admin clearboard` | Removes the panel. |
 
 ### Permissions
 
-| Permission | Par défaut | Donne accès à |
+| Permission | Default | Grants |
 |---|---|---|
-| `thimble.play` | tout le monde | `join`, `solo`, `leave`, `list`, `help` |
-| `thimble.spectate` | tout le monde | `spectate` |
-| `thimble.admin` | opérateurs | `/th admin …` |
+| `thimble.play` | everyone | `join`, `solo`, `leave`, `list`, `help` |
+| `thimble.spectate` | everyone | `spectate` |
+| `thimble.admin` | operators | `/th admin …` |
 
-## Mettre à jour
+## Updating
 
-Remplacer le jar dans `plugins/` puis **redémarrer** le serveur. Ni `config.yml` ni `messages.yml`
-ni `arenas.yml` ne sont écrasés, et il n'y a rien à supprimer : les réglages et les textes absents
-d'un fichier existant retombent sur ceux du jar. Pour voir les nouvelles options commentées, il
-suffit de supprimer le fichier concerné, qui sera régénéré complet.
+Replace the jar in `plugins/` then **restart** the server. Neither `config.yml`, `messages.yml` nor
+`arenas.yml` is overwritten, and there is nothing to delete: settings and texts missing from an
+existing file fall back to those in the jar. To see the new commented options, delete the file
+concerned and it will be regenerated in full.
 
-Une exception depuis cette version : l'écran d'attente affiche désormais `joueurs/max` et non plus
-`joueurs/min`. Si tu as un `messages.yml` personnalisé, remplaces-y `<min>` par `<max>` dans
-`scoreboard.waiting` et `actionbar.waiting` — sinon ces lignes afficheraient un `<min>` littéral.
+One exception since this version: the waiting screen now shows `players/max` instead of
+`players/min`. If you have a customized `messages.yml`, replace `<min>` with `<max>` in
+`scoreboard.waiting` and `actionbar.waiting` — otherwise these lines would show a literal `<min>`.
 
 ## Documentation
 
-- [Spécifications du jeu et du plugin](docs/SPECIFICATIONS.md) — règles, cible technique,
-  architecture, détection des sauts, commandes, fichiers, affichage, et ce qui n'est
-  volontairement pas fait.
+- [Game and plugin specification](docs/SPECIFICATIONS.md) — rules, technical target, architecture,
+  jump detection, commands, files, display, and what is deliberately not done.
+
+## License
+
+[MIT](LICENSE)
