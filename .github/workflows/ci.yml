@@ -2,7 +2,10 @@ name: CI
 on:
   push:
     branches: [main]
+    # Documentation only: nothing to build. A change touching any other file still runs it.
+    paths-ignore: ["**.md", "docs/**", "LICENSE", ".github/ISSUE_TEMPLATE/**"]
   pull_request:
+    paths-ignore: ["**.md", "docs/**", "LICENSE", ".github/ISSUE_TEMPLATE/**"]
 
 permissions:
   contents: read
