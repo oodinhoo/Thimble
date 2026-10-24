@@ -228,6 +228,7 @@ One exception since this version: the waiting screen now shows `players/max` ins
 
 - [Game and plugin specification](docs/SPECIFICATIONS.md) — rules, technical target, architecture,
   jump detection, commands, files, display, and what is deliberately not done.
+- [Contributing](CONTRIBUTING.md) — building, testing and getting a change merged.
 
 ## License
 
