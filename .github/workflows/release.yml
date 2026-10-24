@@ -12,12 +12,12 @@ jobs:
   jar:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-java@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
           java-version: 25
-      - uses: gradle/actions/setup-gradle@v6
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
       # A tag that does not match build.gradle.kts would publish a jar with a wrong version.
       - name: Check the tag matches build.gradle.kts
         run: |
@@ -31,7 +31,7 @@ jobs:
       - name: Checksum
         run: (cd "$(dirname "$JAR")" && sha256sum "$(basename "$JAR")") > "$JAR.sha256"
       # Lets anyone check the jar was built here, from this tag: gh attestation verify.
-      - uses: actions/attest-build-provenance@v4
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: ${{ env.JAR }}
       - name: Publish the release
