@@ -4,8 +4,9 @@ on:
     branches: [main]
     # Documentation only: nothing to build. A change touching any other file still runs it.
     paths-ignore: ["**.md", "docs/**", "LICENSE", ".github/ISSUE_TEMPLATE/**"]
+  # Every pull request runs it, docs included: "build" is a required check to merge, and a
+  # skipped workflow would leave it pending forever.
   pull_request:
-    paths-ignore: ["**.md", "docs/**", "LICENSE", ".github/ISSUE_TEMPLATE/**"]
 
 permissions:
   contents: read
