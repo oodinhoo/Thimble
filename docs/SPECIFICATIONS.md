@@ -83,7 +83,7 @@ le manifeste : un seul fichier à reprendre, le jour où ça vaut le coup.
 
 ### 2.1 Arborescence
 
-Un package plat, six classes. Le découpage en sous-packages n'apporterait rien tant que le volume
+Un package plat, sept classes. Le découpage en sous-packages n'apporterait rien tant que le volume
 reste celui-là.
 
 ```text
@@ -97,9 +97,10 @@ Thimble/
     │   ├── ThimbleCommand.java  # /th et /th admin, complétion
     │   ├── GameListener.java    # gel, protections, connexion/déconnexion, clic droit
     │   ├── Hud.java             # titres, sons, barre de boss, barre d'action, tableau de score, particules
+    │   ├── Leaderboard.java     # classement persistant + dernière partie, affiché sur un TextDisplay
     │   └── PlayerSnapshot.java  # état du joueur, en mémoire et sur disque
     ├── main/resources/          # plugin.yml, config.yml, messages.yml
-    └── test/java/fr/thimble/    # HudTest, ArenaConfigTest
+    └── test/java/fr/thimble/    # HudTest, ArenaConfigTest, LeaderboardTest
 ```
 
 ---
@@ -165,6 +166,11 @@ joueur n'est jamais réellement tué, les vies sont comptées par le plugin. Les
 sans émettre de `BlockPlaceEvent`, donc sans passer par WorldGuard — délibéré, mais à savoir. La
 protection de la région contre les joueurs **hors** arène relève d'un autre plugin.
 
+Un joueur **en attente de son tour** est repoussé au bord de la piscine (mur invisible sur
+`PlayerMoveEvent`, mutualisé avec le gel du plongeoir) : sans cela il pouvait tomber dans l'eau et
+fausser une détection. Le sauteur et le joueur qui vise sa case bonus en sont exemptés, de même que
+les éliminés et les spectateurs.
+
 ---
 
 ## 5. Commandes et permissions
@@ -183,6 +189,7 @@ protection de la région contre les joueurs **hors** arène relève d'un autre p
 | `/th admin palette <arène> <add\|remove\|clear\|list> [bloc]` | — | `thimble.admin` |
 | `/th admin enable\|disable\|info\|restore <arène>` | — | `thimble.admin` |
 | `/th admin forcestart\|forcestop <arène>` | — | `thimble.admin` |
+| `/th admin setboard\|clearboard` | pose ou retire le panneau de classement (sans argument d'arène) | `thimble.admin` |
 | `/th admin reload` | recharge config, messages et arènes | `thimble.admin` |
 
 La **baguette** remplace la série de commandes de placement : quatre clics droits — coin, coin
@@ -194,6 +201,11 @@ Un identifiant d'arène est validé (`[a-z0-9_-]{1,32}`) : Bukkit lit le point c
 de chemin, et `piscine.1` imbriquerait la section au point de faire disparaître l'arène au
 rechargement.
 
+Une **pancarte de jonction** rejoint sans commande : première ligne `[Thimble]`, seconde ligne
+l'arène visée (vide = l'arène libre la plus remplie). Le clic droit est intercepté avant l'éditeur
+de pancarte. C'est une bascule : hors partie il rejoint (`/th join`), en partie il fait quitter
+(`/th leave`) — un seul panneau, pas de pancarte « leave » séparée.
+
 ---
 
 ## 6. Fichiers
@@ -204,6 +216,7 @@ rechargement.
 | `messages.yml` | tous les textes, en MiniMessage |
 | `arenas.yml` | une section par arène : positions, coins, réglages, palette |
 | `pending-restore.yml` | états de joueurs à rendre après une partie interrompue |
+| `stats.yml` | stats cumulées par joueur, position du panneau de classement, podium de la dernière partie |
 
 Tout est en secondes dans `config.yml`, la conversion en ticks se fait au point d'usage. Les
 textes du jar servent de valeurs par défaut : une mise à jour qui ajoute des messages n'oblige pas
@@ -225,11 +238,22 @@ main ne peut plus produire un `timeout` nul ni une téléportation vers une posi
 | Titres | début de partie, ton tour, dé à coudre, raté (en cœurs), élimination, victoire |
 | Chat | les faits seulement : poses, dés à coudre, ratés, éliminations, podium |
 | Sons et particules | traînée pendant la chute, gerbe sur un dé à coudre |
+| Panneau de classement | `TextDisplay` flottant posé par `/th admin setboard` : TOP du serveur (victoires, dés à coudre) et podium de la dernière partie, rafraîchi en fin de partie, jamais au tick |
 
 Chaque canal se désactive séparément dans la section `ui` de `config.yml`.
 
+Le panneau de classement est une entité du monde, pas un overlay client : il survit aux
+redémarrages. Elle porte un tag (`thimble_board`) qui sert à retrouver et supprimer les doublons
+au `reload` ou après un crash — le seul piège de ce canal est là, pas dans le rendu.
+
 La couleur d'un joueur vient de `DyeColor`, reconnue au préfixe du matériau (`RED_WOOL`,
 `BLUE_CONCRETE`…) : n'importe quelle palette teinte fonctionne sans table à maintenir.
+
+Cette même couleur teinte le point du joueur sur la **barre de localisation** (le « radar ») et
+son nom au-dessus de la tête. Paper 26.2 n'expose aucune API waypoint ; la couleur d'équipe du
+scoreboard est le seul levier serveur, et le jeu la fait primer sur la couleur par défaut dérivée
+de l'UUID. Elle est bornée aux seize couleurs nommées, d'où le passage par `NamedTextColor.nearestTo`.
+Désactivable via `ui.radar`.
 
 Deux limites du jeu, pas du plugin : une barre de boss n'a que six couleurs et l'or n'en fait pas
 partie, le bonus utilise donc le violet avec un texte doré ; et une barre d'action s'efface au
@@ -258,13 +282,14 @@ chaque joueur connecté, y compris ceux qui ne jouent pas.
 
 ## 9. Tests
 
-Sept tests, sur ce qui ne touche ni au monde ni aux joueurs : `paper-api` sur le classpath de test
+Neuf tests, sur ce qui ne touche ni au monde ni aux joueurs : `paper-api` sur le classpath de test
 suffit, aucun simulateur n'est nécessaire.
 
 | Test | Couvre |
 |---|---|
 | `HudTest` | cœurs, jauge en dix crans, carré de couleur y compris pour un bloc non teinté |
 | `ArenaConfigTest` | bornes des réglages, clé inconnue signalée, énumération de ce qui manque à une arène, validation des identifiants |
+| `LeaderboardTest` | tri du classement : victoires d'abord, dés à coudre pour départager, taille du TOP bornée |
 
 **Le reste ne se teste pas hors serveur, et ce n'est pas un choix.** `forceStart()` finit par
 téléporter un joueur ; tout ce qui touche à la partie appelle `Bukkit`. Il faudrait un simulateur
@@ -282,7 +307,8 @@ d'avoir un seul endroit qui enchaîne un tour.
 
 | Sujet | Statut |
 |---|---|
-| Statistiques persistantes, `/th top`, records solo | non fait — écarté volontairement |
+| Statistiques persistantes (victoires, parties, dés à coudre, cases) | fait — `stats.yml`, affichées sur le panneau de classement (`/th admin setboard`). Seules les parties multi terminées normalement comptent : le solo est de l'entraînement, le forcestop ne passe pas par `end()`, et une partie où il ne reste qu'un joueur classé (adversaires partis) ne compte pas, sans quoi un second compte donnerait des victoires gratuites |
+| `/th top` en commande, records solo | non fait — le panneau suffit tant que personne ne demande le classement en chat |
 | PlaceholderAPI, récompenses Vault, stockage SQL | non fait |
 | Mode simultané (tous les joueurs sautent en même temps) | non fait, le seul ajout de mode qui vaudrait le coup |
 | Mort subite | non fait |

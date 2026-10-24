@@ -85,6 +85,11 @@ placée.
 /th list
 ```
 
+Une **pancarte** peut servir de bouton de jonction : `[Thimble]` en première ligne, le nom de
+l'arène en seconde (laissée vide = l'arène libre la plus remplie). Un clic droit dessus rejoint,
+sans taper de commande. C'est une bascule : re-cliquer alors qu'on est déjà en partie fait quitter,
+comme `/th leave`.
+
 **Mode solo** : démarre immédiatement, sans décompte ni adversaire, sur une arène libre et vide.
 Le but est de remplir toute la piscine sans épuiser ses vies. La partie s'arrête à court de vies —
 le bilan donne le nombre de cases remplies et de dés à coudre — ou en victoire si la dernière case
@@ -113,10 +118,27 @@ rendus à la connexion suivante — ils sont écrits sur disque dès l'entrée e
 
 Pendant la partie : le tableau de score donne les joueurs avec leur couleur et leurs vies en cœurs,
 la barre d'action rappelle la consigne du moment, la barre de boss passe au rouge sous cinq
-secondes, et la fin de partie affiche le classement complet.
+secondes, et la fin de partie affiche le classement complet. La couleur attribuée à chaque joueur
+teinte aussi son point sur la barre de localisation (le « radar ») et son nom au-dessus de la tête,
+et la traînée de particules de sa chute. Un joueur **en attente de son tour** est retenu au bord de
+la piscine, pour ne pas y tomber et fausser une détection.
 
-Titres, sons, barre d'action, barre de boss, tableau de score et particules se désactivent un par
-un dans la section `ui` de `config.yml`.
+Titres, sons, barre d'action, barre de boss, tableau de score, particules, panneau de classement
+(`leaderboard`) et couleur radar (`radar`) se désactivent un par un dans la section `ui` de
+`config.yml`.
+
+## Classement
+
+Un **panneau flottant** affiche le classement persistant du serveur — victoires et dés à coudre,
+TOP réglable (`leaderboard.size`) — et le résultat de la dernière partie. Place-toi à l'endroit
+voulu, regarde dans la bonne direction, puis `/th admin setboard` ; `/th admin clearboard` le
+retire, et le reposer ailleurs déplace l'ancien.
+
+Il se met à jour à la fin de chaque partie **multijoueur terminée normalement**. Le solo (c'est de
+l'entraînement), les parties interrompues par `forcestop` et celles gagnées parce que tous les
+adversaires sont partis ne comptent pas. Les stats vivent dans
+`stats.yml` et survivent aux redémarrages ; `ui.leaderboard: false` masque le panneau sans cesser
+de compter.
 
 ## Commandes
 
@@ -175,6 +197,13 @@ touche tab, et `/th help` n'affiche les lignes d'administration qu'aux joueurs q
 | `/th admin forcestop <arène>` | Interrompt la partie et rend chacun à son point de départ. |
 | `/th admin reload` | Recharge `config.yml`, `messages.yml` et `arenas.yml`. **Arrête les parties en cours** : à éviter quand le serveur est peuplé. |
 
+**Classement** — ces deux commandes ne prennent pas d'arène : le panneau est unique pour le serveur.
+
+| Commande | Rôle |
+|---|---|
+| `/th admin setboard` | Pose le panneau de classement flottant à ta position, orientation comprise. Le déplace s'il existait ailleurs. |
+| `/th admin clearboard` | Retire le panneau. |
+
 ### Permissions
 
 | Permission | Par défaut | Donne accès à |
@@ -189,6 +218,10 @@ Remplacer le jar dans `plugins/` puis **redémarrer** le serveur. Ni `config.yml
 ni `arenas.yml` ne sont écrasés, et il n'y a rien à supprimer : les réglages et les textes absents
 d'un fichier existant retombent sur ceux du jar. Pour voir les nouvelles options commentées, il
 suffit de supprimer le fichier concerné, qui sera régénéré complet.
+
+Une exception depuis cette version : l'écran d'attente affiche désormais `joueurs/max` et non plus
+`joueurs/min`. Si tu as un `messages.yml` personnalisé, remplaces-y `<min>` par `<max>` dans
+`scoreboard.waiting` et `actionbar.waiting` — sinon ces lignes afficheraient un `<min>` littéral.
 
 ## Documentation
 

@@ -41,6 +41,11 @@ default-palette:
   - LIGHT_BLUE_WOOL
   - BLACK_WOOL
 
+# Classement persistant du serveur, affiche sur un panneau flottant (/th admin setboard).
+leaderboard:
+  # Nombre de joueurs affiches dans le TOP.
+  size: 10
+
 # Habillage. Passer une entree a false la desactive entierement.
 ui:
   titles: true
@@ -49,3 +54,9 @@ ui:
   bossbar: true
   scoreboard: true
   particles: true
+  # Le panneau flottant du classement. Les stats continuent d'etre comptees si false,
+  # seul l'affichage disparait.
+  leaderboard: true
+  # Couleur du joueur sur la barre de localisation (le "radar") et de son nom, assortie a
+  # son bloc. Passe par une equipe de scoreboard, seul levier serveur disponible.
+  radar: true

@@ -37,6 +37,7 @@ public final class ThimblePlugin extends JavaPlugin {
     private final Map<String, Arena> arenas = new LinkedHashMap<>();
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final Hud hud = new Hud(this);
+    private final Leaderboard leaderboard = new Leaderboard(this);
     private final Map<UUID, Arena> byPlayer = new HashMap<>();
     private YamlConfiguration messages;
     private Component prefix = Component.empty();
@@ -107,6 +108,8 @@ public final class ThimblePlugin extends JavaPlugin {
                 arenas.put(id, arena);
             }
         }
+        // Apres les messages : le rendu du tableau les utilise des le chargement.
+        leaderboard.load();
     }
 
     void saveArenas() {
@@ -278,6 +281,10 @@ public final class ThimblePlugin extends JavaPlugin {
         return hud;
     }
 
+    Leaderboard leaderboard() {
+        return leaderboard;
+    }
+
     // ------------------------------------------------------------------
     //  Baguette de configuration
     // ------------------------------------------------------------------
@@ -397,5 +404,33 @@ public final class ThimblePlugin extends JavaPlugin {
 
     void send(CommandSender to, String key, String... placeholders) {
         to.sendMessage(prefix.append(message(key, placeholders)));
+    }
+
+    /**
+     * Clic sur une pancarte, en bascule : deja en partie, le joueur la quitte (comme {@code /th
+     * leave}) ; sinon il rejoint, comme {@code /th join} — arene nommee en seconde ligne, sinon
+     * l'arene libre la plus remplie.
+     */
+    void signClick(Player player, String arenaId) {
+        Arena current = arenaOf(player);
+        if (current != null) {
+            current.leave(player, true);
+            return;
+        }
+        // La pancarte est une autre porte d'entree que /th join : memes droits.
+        if (!player.hasPermission("thimble.play")) {
+            send(player, "general.no-permission");
+            return;
+        }
+        boolean named = arenaId != null && !arenaId.isBlank();
+        Arena arena = named ? arena(arenaId) : bestFreeArena();
+        if (arena == null) {
+            send(player, named ? "arena.unknown" : "game.no-free-arena", "arena", named ? arenaId : "");
+            return;
+        }
+        String error = arena.join(player);
+        if (error != null) {
+            send(player, error, "arena", arena.id());
+        }
     }
 }

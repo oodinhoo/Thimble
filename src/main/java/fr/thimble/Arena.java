@@ -468,7 +468,8 @@ final class Arena {
         Player player = Bukkit.getPlayer(jumper);
         if (player != null) {
             if (falling) {
-                plugin.hud().trail(player.getLocation(), viewers());
+                Seat seat = seats.get(jumper);
+                plugin.hud().trail(player.getLocation(), seat == null ? null : seat.block, viewers());
             }
             // La resolution est faite ici, et non sur PlayerMoveEvent : un joueur qui atterrit
             // sur un bloc et reste immobile n'emet plus aucun mouvement.
@@ -527,6 +528,7 @@ final class Arena {
             Player player = Bukkit.getPlayer(uuid);
             if (player != null) {
                 plugin.send(player, "game.your-color", "block", seat.block.name());
+                plugin.hud().colorPlayer(this, player, seat.block);
             }
         }
         state = State.PLAYING;
@@ -787,14 +789,16 @@ final class Arena {
         state = State.ENDING;
         jumper = null;
         ticks = plugin.endDelaySeconds() * 20;
-        UUID winner = null;
+        // Classement de fin : les survivants, puis les elimines du dernier au premier. Plusieurs
+        // survivants (piscine pleine sans remise a neuf) : pas de vainqueur, comme promis en config.
+        List<UUID> ranking = new ArrayList<>();
         for (UUID uuid : order) {
             Seat seat = seats.get(uuid);
             if (seat != null && seat.alive) {
-                winner = uuid;
-                break;
+                ranking.add(uuid);
             }
         }
+        UUID winner = ranking.size() == 1 ? ranking.get(0) : null;
         plugin.hud().hideBar(this, viewers());
         if (solo) {
             endSolo();
@@ -809,18 +813,30 @@ final class Arena {
             plugin.hud().title(viewers(), "title.win", "title.win-sub", "player", name);
             plugin.hud().sound(viewers(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f);
         }
-        podium(winner);
-    }
-
-    /** Classement de fin : le vainqueur, puis les elimines du dernier au premier. */
-    private void podium(UUID winner) {
-        List<UUID> ranking = new ArrayList<>();
-        if (winner != null) {
-            ranking.add(winner);
-        }
         for (int i = eliminated.size() - 1; i >= 0; i--) {
             ranking.add(eliminated.get(i));
         }
+        podium(ranking);
+        recordStats(ranking, winner);
+    }
+
+    /** Stats persistantes : solo (retour anticipe) et forcestop (shutdown direct) sont hors d'ici. */
+    private void recordStats(List<UUID> ranking, UUID winner) {
+        List<Leaderboard.ResultLine> lines = new ArrayList<>();
+        for (UUID uuid : ranking) {
+            Seat seat = seats.get(uuid);
+            if (seat != null) {
+                lines.add(new Leaderboard.ResultLine(uuid, nameOf(uuid), seat.hits, seat.thimbles));
+            }
+        }
+        // Un seul classe = les adversaires sont partis : compter la victoire la rendrait gratuite
+        // a quiconque joue avec un second compte.
+        if (lines.size() >= 2) {
+            plugin.leaderboard().record(id, winner, lines);
+        }
+    }
+
+    private void podium(List<UUID> ranking) {
         if (ranking.isEmpty()) {
             return;
         }
@@ -897,7 +913,7 @@ final class Arena {
             lines.add(Hud.gauge(water, poolSize()));
         } else {
             lines.add(plugin.message("scoreboard.waiting",
-                    "players", String.valueOf(seats.size()), "min", String.valueOf(minPlayers)));
+                    "players", String.valueOf(seats.size()), "max", String.valueOf(maxPlayers)));
             if (state == State.STARTING) {
                 lines.add(plugin.message("scoreboard.countdown", "time", String.valueOf(ticks / 20)));
             }
@@ -911,7 +927,7 @@ final class Arena {
     private void refreshActionBar(List<Player> viewers, int water) {
         if (state != State.PLAYING) {
             plugin.hud().actionBar(viewers, "actionbar.waiting",
-                    "players", String.valueOf(seats.size()), "min", String.valueOf(minPlayers));
+                    "players", String.valueOf(seats.size()), "max", String.valueOf(maxPlayers));
             return;
         }
         // Les spectateurs lisent tous la meme phrase : elle n'est composee qu'une fois.
@@ -986,6 +1002,24 @@ final class Arena {
                 && x <= Math.max(corner1.getBlockX(), corner2.getBlockX())
                 && z >= Math.min(corner1.getBlockZ(), corner2.getBlockZ())
                 && z <= Math.max(corner1.getBlockZ(), corner2.getBlockZ());
+    }
+
+    /**
+     * Un joueur en attente de son tour ne doit pas tomber dans la piscine. Le sauteur et le joueur
+     * qui choisit sa case bonus y ont droit ; un elimine (siege mort) ou un spectateur, non concernes.
+     * ponytail: bloque toute la colonne (x,z) de la piscine, pas une bande verticale ; suffisant tant
+     * qu'aucune arene n'a de passerelle au-dessus de l'eau.
+     */
+    boolean forbidsPool(Player player, Location to) {
+        if (state != State.PLAYING || !hasPool()) {
+            return false;
+        }
+        UUID uuid = player.getUniqueId();
+        Seat seat = seats.get(uuid);
+        if (seat == null || !seat.alive || uuid.equals(jumper) || uuid.equals(bonusPicker)) {
+            return false;
+        }
+        return inPool(to.getBlockX(), to.getBlockZ());
     }
 
     /** Vrai si les 4 cases voisines sont deja remplies (ou hors piscine) : un trou de 1x1. */

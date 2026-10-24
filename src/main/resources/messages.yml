@@ -80,6 +80,20 @@ game:
   stopped: "<red>La partie a ete interrompue.</red>"
   quit-during-turn: "<gray><player> s'est deconnecte pendant son tour.</gray>"
 
+board:
+  set: "<green>Tableau du classement pose a ta position.</green>"
+  cleared: "<yellow>Tableau du classement retire.</yellow>"
+
+# Texte du panneau flottant du classement (TextDisplay), lignes separees par le plugin.
+leaderboard:
+  title: "<gradient:#38bdf8:#818cf8><bold>CLASSEMENT</bold></gradient>"
+  empty: "<gray>Aucune partie jouee pour l'instant.</gray>"
+  line: "<gray><rank>.</gray> <white><player></white> <dark_gray>|</dark_gray> <gold><wins></gold> <gray>win</gray> <dark_gray>|</dark_gray> <aqua><thimbles></aqua> <gray>dac</gray>"
+  last-header: "<dark_gray>-----</dark_gray> <white>Derniere partie</white> <dark_gray>(<arena>)</dark_gray> <dark_gray>-----</dark_gray>"
+  last-none: "<gray>-</gray>"
+  last-winner: "<gold><bold><player></bold></gold> <gray>remporte la derniere partie</gray>"
+  last-line: "<gray><rank>.</gray> <white><player></white> <dark_gray>|</dark_gray> <gray><hits> cases</gray> <dark_gray>|</dark_gray> <aqua><thimbles> dac</aqua>"
+
 help:
   header: "<gray>Commandes du <white>de a coudre</white> :</gray>"
   player: |-
@@ -98,6 +112,7 @@ help:
     <dark_gray>-</dark_gray> <white>/th admin palette <arene> <add|remove|clear|list> [bloc]</white>
     <dark_gray>-</dark_gray> <white>/th admin enable|disable|info|restore <arene></white>
     <dark_gray>-</dark_gray> <white>/th admin forcestart|forcestop <arene></white>
+    <dark_gray>-</dark_gray> <white>/th admin setboard|clearboard</white> <gray>: panneau du classement, a ta position</gray>
     <dark_gray>-</dark_gray> <white>/th admin reload</white>
 
 state:
@@ -137,12 +152,12 @@ scoreboard:
   player-out: "<dark_gray><cursor></dark_gray> <square> <dark_gray><st><player></st> x</dark_gray>"
   separator: "<dark_gray>--------------</dark_gray>"
   summary: "<gray>Manche <white><round></white> <dark_gray>|</dark_gray> <gray>Eau <aqua><water></aqua><dark_gray>/<total></dark_gray>"
-  waiting: "<gray>Joueurs : <white><players></white>/<white><min></white></gray>"
+  waiting: "<gray>Joueurs : <white><players></white>/<white><max></white></gray>"
   countdown: "<yellow>Debut dans <white><time></white>s</yellow>"
   arena: "<dark_gray><arena></dark_gray>"
 
 actionbar:
-  waiting: "<gray>En attente</gray> <dark_gray>|</dark_gray> <white><players></white><dark_gray>/<min></dark_gray> <gray>joueurs</gray>"
+  waiting: "<gray>En attente</gray> <dark_gray>|</dark_gray> <white><players></white><dark_gray>/<max></dark_gray> <gray>joueurs</gray>"
   your-turn: "<green>A toi de jouer</green> <dark_gray>|</dark_gray> <white>saute dans l'eau</white> <dark_gray>|</dark_gray> <aqua><water></aqua> <gray>libres</gray>"
   watching: "<gray>Au tour de</gray> <yellow><player></yellow> <dark_gray>|</dark_gray> <aqua><water></aqua> <gray>libres</gray>"
   bonus: "<gold>Clic droit</gold> <gray>: remplir une case d'eau ou rouvrir un bloc</gray> <dark_gray>(<white><time></white>s)</dark_gray>"

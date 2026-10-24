@@ -1,6 +1,8 @@
 package fr.thimble;
 
 import org.bukkit.Location;
+import org.bukkit.block.Sign;
+import org.bukkit.block.sign.Side;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -17,6 +19,9 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+
 final class GameListener implements Listener {
 
     private final ThimblePlugin plugin;
@@ -25,21 +30,27 @@ final class GameListener implements Listener {
         this.plugin = plugin;
     }
 
+    private static String plain(Component line) {
+        return PlainTextComponentSerializer.plainText().serialize(line).trim();
+    }
+
     @EventHandler(ignoreCancelled = true)
     public void onMove(PlayerMoveEvent event) {
         Arena arena = plugin.arenaOf(event.getPlayer());
         if (arena == null) {
             return;
         }
-        if (arena.frozen(event.getPlayer())) {
-            Location from = event.getFrom();
-            Location to = event.getTo();
-            if (from.getX() != to.getX() || from.getY() != to.getY() || from.getZ() != to.getZ()) {
-                Location blocked = from.clone();
-                blocked.setYaw(to.getYaw());
-                blocked.setPitch(to.getPitch());
-                event.setTo(blocked);
-            }
+        Location from = event.getFrom();
+        Location to = event.getTo();
+        if (from.getX() == to.getX() && from.getY() == to.getY() && from.getZ() == to.getZ()) {
+            return; // simple rotation : rien a bloquer
+        }
+        // Gel sur le plongeoir, ou joueur en attente qui tenterait d'entrer dans la piscine.
+        if (arena.frozen(event.getPlayer()) || arena.forbidsPool(event.getPlayer(), to)) {
+            Location blocked = from.clone();
+            blocked.setYaw(to.getYaw());
+            blocked.setPitch(to.getPitch());
+            event.setTo(blocked);
         }
     }
 
@@ -82,6 +93,15 @@ final class GameListener implements Listener {
         }
         if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) {
             return;
+        }
+        if (event.getAction() == Action.RIGHT_CLICK_BLOCK && event.getClickedBlock() != null
+                && event.getClickedBlock().getState() instanceof Sign sign) {
+            String first = plain(sign.getSide(Side.FRONT).line(0));
+            if (first.equalsIgnoreCase("[thimble]")) {
+                event.setCancelled(true); // avant tout : empeche l'ouverture de l'editeur de pancarte
+                plugin.signClick(event.getPlayer(), plain(sign.getSide(Side.FRONT).line(1)));
+                return;
+            }
         }
         if (plugin.handleWandClick(event.getPlayer())) {
             event.setCancelled(true);

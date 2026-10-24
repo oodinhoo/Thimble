@@ -21,7 +21,7 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
     private static final List<String> PLAYER_SUBS = List.of("join", "solo", "spectate", "leave", "list", "help");
     private static final List<String> ADMIN_SUBS = List.of("create", "delete", "setwait", "setjump",
             "setspectator", "pos1", "pos2", "setsurface", "set", "palette", "enable", "disable",
-            "info", "restore", "forcestart", "forcestop", "wand", "reload");
+            "info", "restore", "forcestart", "forcestop", "wand", "setboard", "clearboard", "reload");
     private static final List<String> VALUE_KEYS = List.of("min", "max", "lives", "timeout");
 
     private final ThimblePlugin plugin;
@@ -177,6 +177,20 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
         if (sub.equals("reload")) {
             plugin.reload();
             plugin.send(sender, "general.reloaded");
+            return;
+        }
+        if (sub.equals("setboard")) {
+            if (sender instanceof Player player) {
+                plugin.leaderboard().setBoard(player.getLocation());
+                plugin.send(sender, "board.set");
+            } else {
+                plugin.send(sender, "general.player-only");
+            }
+            return;
+        }
+        if (sub.equals("clearboard")) {
+            plugin.leaderboard().clearBoard();
+            plugin.send(sender, "board.cleared");
             return;
         }
         if (args.length < 2) {

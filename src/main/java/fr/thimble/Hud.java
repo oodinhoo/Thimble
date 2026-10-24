@@ -19,6 +19,7 @@ import org.bukkit.scoreboard.Criteria;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
 
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
@@ -68,16 +69,20 @@ final class Hud {
         players.forEach(player -> player.sendActionBar(text));
     }
 
-    /** Le carre de couleur d'un joueur, deduit du bloc qui lui est attribue. */
-    static Component square(Material block) {
+    /** La couleur Bukkit d'un bloc teinte (prefixe {@code RED_}, {@code BLUE_}...), blanc par defaut. */
+    static Color dyeColor(Material block) {
         for (DyeColor dye : DyeColor.values()) {
             if (block != null && block.name().startsWith(dye.name() + "_")) {
-                Color color = dye.getColor();
-                return Component.text("■",
-                        TextColor.color(color.getRed(), color.getGreen(), color.getBlue()));
+                return dye.getColor();
             }
         }
-        return Component.text("■", NamedTextColor.WHITE);
+        return Color.WHITE;
+    }
+
+    /** Le carre de couleur d'un joueur, deduit du bloc qui lui est attribue. */
+    static Component square(Material block) {
+        Color color = dyeColor(block);
+        return Component.text("■", TextColor.color(color.getRed(), color.getGreen(), color.getBlue()));
     }
 
     /** Les vies en coeurs : pleins pour ce qu'il reste, eteints pour ce qui est perdu. */
@@ -151,12 +156,39 @@ final class Hud {
         });
     }
 
-    /** Trainee de particules derriere le sauteur. */
-    void trail(Location location, Collection<Player> viewers) {
+    /**
+     * Place le joueur dans une equipe coloree a la teinte de son bloc, sur le tableau de l'arene.
+     * La couleur d'equipe teinte le point du joueur sur la barre de localisation (le « radar »)
+     * et son nom au-dessus de la tete : aucune API waypoint n'existe en Paper 26.2, l'equipe est
+     * le seul levier serveur, borne aux 16 couleurs nommees (d'ou {@link NamedTextColor#nearestTo}).
+     */
+    void colorPlayer(Arena arena, Player player, Material block) {
+        if (!plugin.ui("radar")) {
+            return;
+        }
+        Color rgb = dyeColor(block);
+        NamedTextColor named = NamedTextColor.nearestTo(
+                TextColor.color(rgb.getRed(), rgb.getGreen(), rgb.getBlue()));
+        Scoreboard board = boards.computeIfAbsent(arena.id(),
+                id -> Bukkit.getScoreboardManager().getNewScoreboard());
+        String teamName = "th" + Integer.toHexString(named.value()); // une equipe par couleur, reutilisee
+        Team team = board.getTeam(teamName);
+        if (team == null) {
+            team = board.registerNewTeam(teamName);
+            team.color(named);
+        }
+        team.addEntry(player.getName());
+        previousBoards.putIfAbsent(player.getUniqueId(), player.getScoreboard());
+        player.setScoreboard(board);
+    }
+
+    /** Trainee de particules derriere le sauteur, a la couleur de son bloc. */
+    void trail(Location location, Material block, Collection<Player> viewers) {
         if (!plugin.ui("particles")) {
             return;
         }
-        viewers.forEach(player -> player.spawnParticle(Particle.END_ROD, location, 1, 0, 0, 0, 0));
+        Particle.DustOptions dust = new Particle.DustOptions(dyeColor(block), 1.2f);
+        viewers.forEach(player -> player.spawnParticle(Particle.DUST, location, 2, 0, 0, 0, 0, dust));
     }
 
     void burst(Location location, Collection<Player> viewers) {
