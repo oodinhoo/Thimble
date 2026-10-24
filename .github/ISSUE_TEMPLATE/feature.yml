@@ -1,0 +1,20 @@
+name: Feature request
+description: A game mode, rule, command or display to add
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Some ideas were already weighed and set aside: see "What is not done" in
+        [the specification](https://github.com/oodinhoo/Thimble/blob/main/docs/SPECIFICATIONS.md#10-what-is-not-done).
+  - type: textarea
+    id: need
+    attributes:
+      label: What you need, and why
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: How it would play
+      description: What players or admins would do and see.
