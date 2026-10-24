@@ -4,3 +4,24 @@ out/
 *.iml
 .idea/
 .vscode/
+.classpath
+.project
+.settings/
+bin/
+
+# Serveur Paper de test local
+run/
+
+# Systeme
+.DS_Store
+Thumbs.db
+*.log
+
+# Reglages locaux de Claude Code
+.claude/settings.local.json
+
+# Fichiers d agents, prives
+CLAUDE.md
+CONTEXT.md
+PROJECT-CONTEXT.md
+docs/carnet-de-lecon.md
