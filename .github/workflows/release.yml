@@ -1,0 +1,40 @@
+name: Release
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # create the release
+  id-token: write # sign the provenance attestation
+  attestations: write
+
+jobs:
+  jar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@v6
+      # A tag that does not match build.gradle.kts would publish a jar with a wrong version.
+      - name: Check the tag matches build.gradle.kts
+        run: |
+          version=$(bash gradlew -q properties --property version | sed -n 's/^version: //p')
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME but build.gradle.kts says $version"
+            exit 1
+          fi
+          echo "JAR=build/libs/Thimble-$version.jar" >> "$GITHUB_ENV"
+      - run: bash gradlew build
+      - name: Checksum
+        run: (cd "$(dirname "$JAR")" && sha256sum "$(basename "$JAR")") > "$JAR.sha256"
+      # Lets anyone check the jar was built here, from this tag: gh attestation verify.
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: ${{ env.JAR }}
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" "$JAR" "$JAR.sha256" --title "$GITHUB_REF_NAME" --generate-notes

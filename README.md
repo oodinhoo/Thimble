@@ -12,7 +12,10 @@ In-game texts are in French; every one of them can be changed in `messages.yml`.
 
 ## Building
 
-Requires **JDK 25** (mandatory since Minecraft 26.1).
+Ready-made jars are on the [Releases](../../releases) page, each with its SHA-256 and a build
+provenance attestation (`gh attestation verify Thimble-<version>.jar --repo oodinhoo/Thimble`).
+
+Building from source requires **JDK 25** (mandatory since Minecraft 26.1).
 
 ```powershell
 $env:JAVA_HOME = "<path to a JDK 25>"

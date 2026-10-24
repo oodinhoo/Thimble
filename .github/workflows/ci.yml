@@ -1,0 +1,27 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # Linux: the platform of most Paper servers.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 25
+      # Gradle cache, and validation of the wrapper jar against the known Gradle checksums.
+      - uses: gradle/actions/setup-gradle@v6
+      - run: bash gradlew build
+      # The plugin jar of this commit, downloadable from the run summary.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Thimble-jar
+          path: build/libs/*.jar
