@@ -21,7 +21,7 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:26.2.build.112-stable")
     // La logique d'affichage se teste sans serveur : l'API suffit sur le classpath de test.
     testImplementation("io.papermc.paper:paper-api:26.2.build.112-stable")
-    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
