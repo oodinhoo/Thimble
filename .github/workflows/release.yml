@@ -27,6 +27,9 @@ jobs:
             exit 1
           fi
           echo "JAR=build/libs/Thimble-$version.jar" >> "$GITHUB_ENV"
+      # The Paper version the jar is compiled against, shown on the release: 26.2.build.112-stable.
+      - name: Read the target Paper version
+        run: echo "PAPER=$(sed -n 's/.*paper-api:\([^"]*\)".*/\1/p' build.gradle.kts | head -1)" >> "$GITHUB_ENV"
       - run: bash gradlew build
       - name: Checksum
         run: (cd "$(dirname "$JAR")" && sha256sum "$(basename "$JAR")") > "$JAR.sha256"
@@ -37,4 +40,8 @@ jobs:
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" "$JAR" "$JAR.sha256" --title "$GITHUB_REF_NAME" --generate-notes
+        run: |
+          gh release create "$GITHUB_REF_NAME" "$JAR" "$JAR.sha256" \
+            --title "$GITHUB_REF_NAME (Paper ${PAPER%%.build*})" \
+            --notes "For **Paper ${PAPER%%.build*}** servers, built against \`paper-api $PAPER\` with Java 25." \
+            --generate-notes
