@@ -6,6 +6,8 @@ Players take turns jumping from a diving board into a pool. Landing in the water
 their color where they hit — the pool shrinks with every jump. Missing costs a life. The last
 player alive wins.
 
+![A game of Thimble: jumps, misses, a thimble bonus and the last player standing](docs/thimble.gif)
+
 In-game texts are in French; every one of them can be changed in `messages.yml`.
 
 ## Building
