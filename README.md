@@ -223,11 +223,11 @@ Replace the jar in `plugins/` then **restart** the server. Neither `config.yml`,
 existing file fall back to those in the jar. To see the new commented options, delete the file
 concerned and it will be regenerated in full.
 
-One exception since this version: the waiting screen now shows `players/max` instead of
+Since 0.2.0, the waiting screen now shows `players/max` instead of
 `players/min`. If you have a customized `messages.yml`, replace `<min>` with `<max>` in
 `scoreboard.waiting` and `actionbar.waiting` — otherwise these lines would show a literal `<min>`.
 
-Texts now default to English. To keep French, run `/th admin lang fr` once (or add
+Since 0.3.0, texts default to English. To keep French, run `/th admin lang fr` once (or add
 `language: fr` to `config.yml`); a customized `messages.yml` is still the French file and is kept.
 
 ## Documentation
