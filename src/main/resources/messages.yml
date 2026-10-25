@@ -10,6 +10,13 @@ general:
   usage: "<red>Usage : <white><usage></white></red>"
   invalid-number: "<red><value> n'est pas un nombre valide.</red>"
   reloaded: "<green>Configuration et arenes rechargees.</green>"
+  language-set: "<green>Langue des textes : <white><language></white>.</green>"
+
+# Noms des arguments dans les messages d'usage, affiches tels quels.
+args:
+  arena: "<arene>"
+  value: "<valeur>"
+  block: "<bloc>"
 
 arena:
   unknown: "<red>L'arene <white><arena></white> n'existe pas.</red>"
@@ -30,6 +37,7 @@ arena:
   list-entry: "<dark_gray>-</dark_gray> <white><arena></white> <gray>:</gray> <state> <dark_gray>(<white><players></white>/<white><max></white>)</dark_gray>"
   list-empty: "<gray>Aucune arene. Cree-en une avec <white>/th admin create <nom></white>.</gray>"
   palette-updated: "<green>Palette de <white><arena></white> : <white><palette></white></green>"
+  palette-default: "(defaut)"
   invalid-id: "<red><value> n'est pas un nom valide : lettres, chiffres, tiret et underscore, 32 au plus.</red>"
   start-failed: "<red>Impossible de lancer <white><arena></white> : il faut au moins un joueur, et aucune partie deja en cours.</red>"
   started-ok: "<green>Partie de <white><arena></white> lancee.</green>"
@@ -113,6 +121,7 @@ help:
     <dark_gray>-</dark_gray> <white>/th admin enable|disable|info|restore <arene></white>
     <dark_gray>-</dark_gray> <white>/th admin forcestart|forcestop <arene></white>
     <dark_gray>-</dark_gray> <white>/th admin setboard|clearboard</white> <gray>: panneau du classement, a ta position</gray>
+    <dark_gray>-</dark_gray> <white>/th admin lang <fr|en></white> <gray>: langue des textes</gray>
     <dark_gray>-</dark_gray> <white>/th admin reload</white>
 
 state:

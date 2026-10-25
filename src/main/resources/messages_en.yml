@@ -1,0 +1,182 @@
+# ---------------------------------------------------------------------------
+#  Plugin messages, in MiniMessage format (https://docs.advntr.dev/minimessage/)
+#  <tags> between angle brackets are replaced by the plugin.
+#  Used when config.yml has "language: en" (or after /th admin lang en).
+# ---------------------------------------------------------------------------
+prefix: "<gradient:#38bdf8:#818cf8><bold>Thimble</bold></gradient> <dark_gray>|</dark_gray> "
+
+general:
+  no-permission: "<red>You don't have permission to use this command.</red>"
+  player-only: "<red>This command must be run in game.</red>"
+  usage: "<red>Usage: <white><usage></white></red>"
+  invalid-number: "<red><value> is not a valid number.</red>"
+  reloaded: "<green>Configuration and arenas reloaded.</green>"
+  language-set: "<green>Text language: <white><language></white>.</green>"
+
+# Argument names in usage messages, shown as is.
+args:
+  arena: "<arena>"
+  value: "<value>"
+  block: "<block>"
+
+arena:
+  unknown: "<red>Arena <white><arena></white> doesn't exist.</red>"
+  already-exists: "<red>Arena <white><arena></white> already exists.</red>"
+  created: "<green>Arena <white><arena></white> created. Set it up, then enable it with <white>/th admin enable <arena></white>.</green>"
+  deleted: "<green>Arena <white><arena></white> deleted.</green>"
+  disabled: "<red>Arena <white><arena></white> is disabled.</red>"
+  incomplete: "<red>Arena incomplete: <white><missing></white></red>"
+  enabled-ok: "<green>Arena <white><arena></white> enabled.</green>"
+  disabled-ok: "<yellow>Arena <white><arena></white> disabled.</yellow>"
+  position-set: "<green><what> set for arena <white><arena></white>.</green>"
+  corner-set: "<green>Corner <white><corner></white> set <dark_gray>(<white><pos></white>)</dark_gray>. Water blocks found: <white><water></white>, surface at Y=<white><y></white>.</green>"
+  surface-set: "<green>Pool surface at Y=<white><y></white> <dark_gray>(<white><water></white> water block(s))</dark_gray>.</green>"
+  value-set: "<green><key> = <white><value></white> for arena <white><arena></white>.</green>"
+  restored: "<green>Pool of arena <white><arena></white> restored.</green>"
+  busy: "<red>A game is running in arena <white><arena></white>. Use <white>/th admin forcestop <arena></white>.</red>"
+  list-header: "<gray>Arenas (<white><count></white>):</gray>"
+  list-entry: "<dark_gray>-</dark_gray> <white><arena></white> <gray>:</gray> <state> <dark_gray>(<white><players></white>/<white><max></white>)</dark_gray>"
+  list-empty: "<gray>No arenas. Create one with <white>/th admin create <name></white>.</gray>"
+  palette-updated: "<green>Palette of <white><arena></white>: <white><palette></white></green>"
+  palette-default: "(default)"
+  invalid-id: "<red><value> is not a valid name: letters, digits, dash and underscore, 32 at most.</red>"
+  start-failed: "<red>Can't start <white><arena></white>: it needs at least one player and no game already running.</red>"
+  started-ok: "<green>Game in <white><arena></white> started.</green>"
+  stopped-ok: "<yellow>Game in <white><arena></white> stopped.</yellow>"
+  unknown-material: "<red><value> is not a valid block.</red>"
+  info: "<gray>Arena <white><arena></white>: state=<state> <gray>players=<white><min></white>-<white><max></white> lives=<white><lives></white> timeout=<white><timeout></white>s water=<white><water></white> palette=<white><palette></white></gray>"
+
+game:
+  already-in-game: "<red>You're already in a game.</red>"
+  not-in-game: "<red>You're not in a game.</red>"
+  full: "<red>This arena is full.</red>"
+  in-progress: "<red>A game is already running in this arena.</red>"
+  no-free-arena: "<red>No arena available right now.</red>"
+  joined: "<yellow><player></yellow> <gray>joined the game</gray> <dark_gray>(<white><players></white>/<white><max></white>)</dark_gray>"
+  left: "<yellow><player></yellow> <gray>left the game</gray> <dark_gray>(<white><players></white>/<white><max></white>)</dark_gray>"
+  countdown: "<gray>Game starts in <white><time></white> second(s).</gray>"
+  countdown-cancelled: "<red>Not enough players, countdown cancelled.</red>"
+  solo-started: "<green><bold>Solo mode!</bold></green> <gray>Fill the pool without missing. <white><lives></white> life/lives.</gray>"
+  solo-unavailable: "<red>Solo mode needs a free, empty arena.</red>"
+  solo-over: "<gray>Done:</gray> <white><hits></white> <gray>block(s) filled,</gray> <gold><thimbles></gold> <gray>thimble(s).</gray>"
+  solo-perfect: "<gold><bold>Pool completely filled!</bold></gold> <white><hits></white> <gray>block(s),</gray> <gold><thimbles></gold> <gray>thimble(s), flawless.</gray>"
+  started: "<green><bold>The game begins!</bold></green> <gray>Each player has <white><lives></white> life/lives.</gray>"
+  your-color: "<gray>Your color: <white><block></white></gray>"
+  round: "<dark_gray>-----</dark_gray> <white>Round <round></white> <dark_gray>-----</dark_gray>"
+  hit: "<green><player></green> <gray>places their block</gray> <dark_gray>|</dark_gray> <aqua><water></aqua> <gray>left</gray>"
+  thimble: "<gold><bold>THIMBLE!</bold></gold> <yellow><player></yellow> <gray>hit a 1x1 hole.</gray>"
+  bonus-block: "<gray>Bonus: one extra block is filled.</gray>"
+  bonus-random: "<gray>Bonus: one extra block is picked at random.</gray>"
+  bonus-open: "<aqua><player> reopens a block!</aqua>"
+  replay: "<green>New game in a moment.</green> <gray>Stay, or leave with <white>/th leave</white>.</gray>"
+  replay-waiting: "<gray>Waiting for players <dark_gray>(<white><players></white>/<white><min></white>)</dark_gray>. <white>/th leave</white> to leave.</gray>"
+  bonus-invalid: "<red>Aim at a water block, or a block placed during the game.</red>"
+  spectating: "<gray>You're watching arena <white><arena></white>. <white>/th leave</white> to leave.</gray>"
+  disconnected: "<gray><player> disconnected, their seat is kept for <white><time></white>s.</gray>"
+  reconnected: "<green><player> is back in the game.</green>"
+  rejoin-expired: "<red><player> didn't come back in time.</red> <gray><white><remaining></white> player(s) left.</gray>"
+  miss: "<red><player></red> <gray>missed the pool</gray> <dark_gray>(<white><lives></white> life/lives left)</dark_gray>"
+  timeout: "<red><player></red> <gray>didn't jump in time</gray> <dark_gray>(<white><lives></white> life/lives left)</dark_gray>"
+  eliminated: "<red><bold><player> is eliminated!</bold></red> <gray><white><remaining></white> player(s) left.</gray>"
+  pool-refilled: "<aqua>Not a single block left: the pool is refilled!</aqua>"
+  win: "<gold><bold><player> wins the game!</bold></gold>"
+  podium-header: "<dark_gray>=====</dark_gray> <gold><bold>GAME OVER</bold></gold> <dark_gray>=====</dark_gray>"
+  podium-1: "<gold><bold>1.</bold></gold> <white><bold><player></bold></white> <dark_gray>|</dark_gray> <gray><hits> blocks</gray> <dark_gray>|</dark_gray> <gold><thimbles> thimble(s)</gold>"
+  podium-2: "<gray><bold>2.</bold></gray> <white><player></white> <dark_gray>|</dark_gray> <gray><hits> blocks</gray>"
+  podium-3: "<yellow><bold>3.</bold></yellow> <white><player></white> <dark_gray>|</dark_gray> <gray><hits> blocks</gray>"
+  podium-4: "<dark_gray><rank>. <player> | <hits> blocks</dark_gray>"
+  draw: "<yellow>Game over, no winner.</yellow>"
+  stopped: "<red>The game was stopped.</red>"
+  quit-during-turn: "<gray><player> disconnected during their turn.</gray>"
+
+board:
+  set: "<green>Leaderboard placed at your position.</green>"
+  cleared: "<yellow>Leaderboard removed.</yellow>"
+
+# Text of the floating leaderboard (TextDisplay), lines joined by the plugin.
+leaderboard:
+  title: "<gradient:#38bdf8:#818cf8><bold>LEADERBOARD</bold></gradient>"
+  empty: "<gray>No games played yet.</gray>"
+  line: "<gray><rank>.</gray> <white><player></white> <dark_gray>|</dark_gray> <gold><wins></gold> <gray>wins</gray> <dark_gray>|</dark_gray> <aqua><thimbles></aqua> <gray>thimbles</gray>"
+  last-header: "<dark_gray>-----</dark_gray> <white>Last game</white> <dark_gray>(<arena>)</dark_gray> <dark_gray>-----</dark_gray>"
+  last-none: "<gray>-</gray>"
+  last-winner: "<gold><bold><player></bold></gold> <gray>won the last game</gray>"
+  last-line: "<gray><rank>.</gray> <white><player></white> <dark_gray>|</dark_gray> <gray><hits> blocks</gray> <dark_gray>|</dark_gray> <aqua><thimbles> thimbles</aqua>"
+
+help:
+  header: "<gray><white>Thimble</white> commands:</gray>"
+  player: |-
+    <dark_gray>-</dark_gray> <white>/th join [arena]</white> <gray>: join a game</gray>
+    <dark_gray>-</dark_gray> <white>/th solo [arena]</white> <gray>: solo practice game</gray>
+    <dark_gray>-</dark_gray> <white>/th spectate <arena></white> <gray>: watch a game</gray>
+    <dark_gray>-</dark_gray> <white>/th leave</white> <gray>: leave the game or stop watching</gray>
+    <dark_gray>-</dark_gray> <white>/th list</white> <gray>: list arenas</gray>
+  admin: |-
+    <dark_gray>-</dark_gray> <white>/th admin wand <arena></white> <gray>: guided setup in 4 clicks</gray>
+    <dark_gray>-</dark_gray> <white>/th admin create|delete <arena></white>
+    <dark_gray>-</dark_gray> <white>/th admin setwait|setjump|setspectator <arena></white> <gray>(at your position)</gray>
+    <dark_gray>-</dark_gray> <white>/th admin pos1|pos2 <arena></white> <gray>: pool corners</gray>
+    <dark_gray>-</dark_gray> <white>/th admin setsurface <arena> [y]</white>
+    <dark_gray>-</dark_gray> <white>/th admin set <arena> <min|max|lives|timeout> <value></white>
+    <dark_gray>-</dark_gray> <white>/th admin palette <arena> <add|remove|clear|list> [block]</white>
+    <dark_gray>-</dark_gray> <white>/th admin enable|disable|info|restore <arena></white>
+    <dark_gray>-</dark_gray> <white>/th admin forcestart|forcestop <arena></white>
+    <dark_gray>-</dark_gray> <white>/th admin setboard|clearboard</white> <gray>: leaderboard, at your position</gray>
+    <dark_gray>-</dark_gray> <white>/th admin lang <fr|en></white> <gray>: text language</gray>
+    <dark_gray>-</dark_gray> <white>/th admin reload</white>
+
+state:
+  WAITING: "<green>waiting</green>"
+  STARTING: "<yellow>starting</yellow>"
+  PLAYING: "<red>playing</red>"
+  ENDING: "<yellow>ending</yellow>"
+  DISABLED: "<dark_gray>disabled</dark_gray>"
+
+title:
+  start: "<green><bold>Go!</bold></green>"
+  start-sub: "<gray>Jump in the water, place your block.</gray>"
+  your-turn: "<gold><bold>Your turn!</bold></gold>"
+  your-turn-sub: "<gray>Jump into the pool.</gray>"
+  hit: "<aqua>Splash!</aqua>"
+  thimble: "<gold><bold>THIMBLE</bold></gold>"
+  thimble-sub: "<yellow><player></yellow> <gray>found the 1x1 hole</gray>"
+  bonus: "<gold>Pick a block</gold>"
+  bonus-sub: "<gray>Fill a water block, or reopen a placed one</gray>"
+  miss: "<red><bold>Missed!</bold></red>"
+  miss-sub: "<hearts>"
+  eliminated: "<dark_red><bold>Eliminated</bold></dark_red>"
+  win: "<gold><bold>Victory</bold></gold>"
+  win-sub: "<yellow><player></yellow> <gray>wins the game</gray>"
+  draw: "<yellow>Draw</yellow>"
+
+bossbar:
+  countdown: "<white>Starting in <yellow><time></yellow>s</white>"
+  turn: "<white><yellow><player></yellow>'s turn <dark_gray>|</dark_gray> <yellow><time></yellow>s</white>"
+  turn-urgent: "<red><bold><player></bold></red> <dark_gray>|</dark_gray> <red><bold><time></bold>s</red>"
+  bonus: "<gold><bold>Bonus</bold></gold> <white>| pick a block |</white> <gold><time></gold>s"
+
+scoreboard:
+  title: "<gradient:#38bdf8:#818cf8><bold>THIMBLE</bold></gradient>"
+  player: "<yellow><cursor></yellow> <square> <white><player></white> <hearts>"
+  player-away: "<dark_gray><cursor></dark_gray> <square> <gray><player></gray> <dark_gray>offline</dark_gray>"
+  player-out: "<dark_gray><cursor></dark_gray> <square> <dark_gray><st><player></st> x</dark_gray>"
+  separator: "<dark_gray>--------------</dark_gray>"
+  summary: "<gray>Round <white><round></white> <dark_gray>|</dark_gray> <gray>Water <aqua><water></aqua><dark_gray>/<total></dark_gray>"
+  waiting: "<gray>Players: <white><players></white>/<white><max></white></gray>"
+  countdown: "<yellow>Starting in <white><time></white>s</yellow>"
+  arena: "<dark_gray><arena></dark_gray>"
+
+actionbar:
+  waiting: "<gray>Waiting</gray> <dark_gray>|</dark_gray> <white><players></white><dark_gray>/<max></dark_gray> <gray>players</gray>"
+  your-turn: "<green>Your turn</green> <dark_gray>|</dark_gray> <white>jump in the water</white> <dark_gray>|</dark_gray> <aqua><water></aqua> <gray>left</gray>"
+  watching: "<yellow><player></yellow><gray>'s turn</gray> <dark_gray>|</dark_gray> <aqua><water></aqua> <gray>left</gray>"
+  bonus: "<gold>Right click</gold> <gray>: fill a water block or reopen a placed one</gray> <dark_gray>(<white><time></white>s)</dark_gray>"
+
+setup:
+  wand-name: "<gold><bold>Thimble wand</bold></gold>"
+  started: "<green>Setting up <white><arena></white>: right click with the wand, 4 times.</green>"
+  step-pos1: "<yellow>1/4</yellow> <gray>Aim at <white>the water</white> in one corner of the pool and right click.</gray>"
+  step-pos2: "<yellow>2/4</yellow> <gray>Aim at <white>the water</white> in the opposite corner.</gray>"
+  step-setjump: "<yellow>3/4</yellow> <gray>Aim at the <white>diving board</white> block (you'll be teleported there).</gray>"
+  step-gradins: "<yellow>4/4</yellow> <gray>Aim at the <white>stands</white> block (waiting area and return after each jump).</gray>"
+  done: "<green><bold>Arena <arena> ready and enabled!</bold></green> <gray><water> water blocks found.</gray>"

@@ -97,7 +97,7 @@ Thimble/
     │   ├── Hud.java             # titles, sounds, boss bar, action bar, scoreboard, particles
     │   ├── Leaderboard.java     # persistent leaderboard + last game, shown on a TextDisplay
     │   └── PlayerSnapshot.java  # player state, in memory and on disk
-    ├── main/resources/          # plugin.yml, config.yml, messages.yml
+    ├── main/resources/          # plugin.yml, config.yml, messages.yml, messages_en.yml
     └── test/java/fr/thimble/    # HudTest, ArenaConfigTest, LeaderboardTest
 ```
 
@@ -187,6 +187,7 @@ eliminated players and spectators.
 | `/th admin enable\|disable\|info\|restore <arena>` | — | `thimble.admin` |
 | `/th admin forcestart\|forcestop <arena>` | — | `thimble.admin` |
 | `/th admin setboard\|clearboard` | place or remove the leaderboard panel (no arena argument) | `thimble.admin` |
+| `/th admin lang <fr\|en>` | switch the text language, saved in `config.yml`; reloads the messages and the leaderboard only, games keep running | `thimble.admin` |
 | `/th admin reload` | reload config, messages and arenas | `thimble.admin` |
 
 The **wand** replaces the series of placement commands: four right-clicks — corner, opposite
@@ -208,8 +209,8 @@ sign, no separate "leave" sign. It requires the same `thimble.play` permission a
 
 | File | Content |
 |---|---|
-| `config.yml` | durations, `refill-when-full`, default palette, `ui` section |
-| `messages.yml` | every text, in MiniMessage |
+| `config.yml` | `language`, durations, `refill-when-full`, default palette, `ui` section |
+| `messages.yml`, `messages_en.yml` | every text, in MiniMessage: French, English. Only the file of the current `language` is loaded; both have the same keys (`MessagesTest`) |
 | `arenas.yml` | one section per arena: positions, corners, settings, palette |
 | `pending-restore.yml` | player states to return after an interrupted game |
 | `stats.yml` | cumulative stats per player, leaderboard panel position, last game's podium |

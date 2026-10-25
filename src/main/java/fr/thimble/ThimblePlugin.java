@@ -34,6 +34,8 @@ import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 
 public final class ThimblePlugin extends JavaPlugin {
 
+    static final List<String> LANGUAGES = List.of("fr", "en");
+
     private final Map<String, Arena> arenas = new LinkedHashMap<>();
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final Hud hud = new Hud(this);
@@ -48,7 +50,11 @@ public final class ThimblePlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        saveResource("messages.yml", false);
+        for (String language : LANGUAGES) {
+            if (!new File(getDataFolder(), messagesFile(language)).exists()) {
+                saveResource(messagesFile(language), false);
+            }
+        }
         arenasFile = new File(getDataFolder(), "arenas.yml");
         pendingFile = new File(getDataFolder(), "pending-restore.yml");
         pending = YamlConfiguration.loadConfiguration(pendingFile);
@@ -87,18 +93,7 @@ public final class ThimblePlugin extends JavaPlugin {
         arenas.clear();
         setups.clear();
         reloadConfig();
-        messages = YamlConfiguration.loadConfiguration(new File(getDataFolder(), "messages.yml"));
-        // Les textes du jar servent de repli : une mise a jour qui ajoute des messages n'oblige
-        // pas a supprimer le fichier existant, et les personnalisations sont conservees.
-        try (InputStream bundled = getResource("messages.yml")) {
-            if (bundled != null) {
-                messages.setDefaults(YamlConfiguration.loadConfiguration(
-                        new InputStreamReader(bundled, StandardCharsets.UTF_8)));
-            }
-        } catch (IOException e) {
-            getLogger().warning("Messages par defaut illisibles : " + e.getMessage());
-        }
-        prefix = miniMessage.deserialize(messages.getString("prefix", ""));
+        loadMessages();
         YamlConfiguration stored = YamlConfiguration.loadConfiguration(arenasFile);
         for (String id : stored.getKeys(false)) {
             ConfigurationSection section = stored.getConfigurationSection(id);
@@ -110,6 +105,40 @@ public final class ThimblePlugin extends JavaPlugin {
         }
         // Apres les messages : le rendu du tableau les utilise des le chargement.
         leaderboard.load();
+    }
+
+    /** Le francais garde le nom historique, pour ne pas perdre les fichiers deja personnalises. */
+    static String messagesFile(String language) {
+        return language.equals("fr") ? "messages.yml" : "messages_" + language + ".yml";
+    }
+
+    private void loadMessages() {
+        String language = getConfig().getString("language", "en").toLowerCase(Locale.ROOT);
+        if (!LANGUAGES.contains(language)) {
+            getLogger().warning("Langue inconnue : " + language + ", repli sur en.");
+            language = "en";
+        }
+        String file = messagesFile(language);
+        messages = YamlConfiguration.loadConfiguration(new File(getDataFolder(), file));
+        // Les textes du jar servent de repli : une mise a jour qui ajoute des messages n'oblige
+        // pas a supprimer le fichier existant, et les personnalisations sont conservees.
+        try (InputStream bundled = getResource(file)) {
+            if (bundled != null) {
+                messages.setDefaults(YamlConfiguration.loadConfiguration(
+                        new InputStreamReader(bundled, StandardCharsets.UTF_8)));
+            }
+        } catch (IOException e) {
+            getLogger().warning("Messages par defaut illisibles : " + e.getMessage());
+        }
+        prefix = miniMessage.deserialize(messages.getString("prefix", ""));
+    }
+
+    /** Change la langue sans arreter les parties : seuls les textes et le tableau sont recharges. */
+    void setLanguage(String language) {
+        getConfig().set("language", language);
+        saveConfig();
+        loadMessages();
+        leaderboard.refresh();
     }
 
     void saveArenas() {
@@ -395,6 +424,11 @@ public final class ThimblePlugin extends JavaPlugin {
     Component messageResolved(String key, TagResolver... resolvers) {
         String raw = messages.getString(key);
         return raw == null ? Component.text(key) : miniMessage.deserialize(raw, TagResolver.resolver(resolvers));
+    }
+
+    /** Le texte brut d'une cle, a inserer tel quel dans un autre message (noms d'arguments...). */
+    String text(String key) {
+        return messages.getString(key, key);
     }
 
     /** Le libelle colore d'un etat d'arene, injectable via &lt;state&gt;. */

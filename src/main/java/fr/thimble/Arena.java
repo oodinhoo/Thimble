@@ -1107,9 +1107,10 @@ final class Arena {
             missing.add("setspectator");
         }
         if (!hasPool()) {
-            missing.add("pos1/pos2 (meme monde)");
+            // Noms de commandes, pas de phrases : la liste reste lisible dans toutes les langues.
+            missing.add("pos1/pos2");
         } else if (waterLeft() == 0) {
-            missing.add("de l'eau a Y=" + surfaceY());
+            missing.add("setsurface (Y=" + surfaceY() + ")");
         }
         return missing;
     }

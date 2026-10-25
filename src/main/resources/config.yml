@@ -3,6 +3,10 @@
 #  Durees en secondes sauf mention contraire.
 # ---------------------------------------------------------------------------
 
+# Langue des textes : en (messages_en.yml) ou fr (messages.yml). Modifiable en jeu avec
+# /th admin lang <fr|en>, sans arreter les parties.
+language: en
+
 game:
   # Decompte avant le demarrage, une fois le minimum de joueurs atteint.
   countdown-seconds: 15
