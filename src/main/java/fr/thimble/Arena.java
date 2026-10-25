@@ -26,20 +26,20 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 /**
- * Une arene : sa configuration, et la partie qui s'y deroule.
- * Tout est pilote par {@link #tick()}, appele chaque tick par le plugin.
+  * An arena: its configuration, and the game played in it.
+  * Everything is driven by {@link #tick()}, called every tick by the plugin.
  */
 final class Arena {
 
     enum State { DISABLED, WAITING, STARTING, PLAYING, ENDING }
 
-    /** Un joueur dans la partie en cours. */
+    /** A player in the current game. */
     private static final class Seat {
         PlayerSnapshot snapshot;
         Material block;
         int lives;
         boolean alive = true;
-        /** Ticks restants avant l'elimination d'un joueur deconnecte ; 0 = connecte. */
+        /** Ticks left before a disconnected player is eliminated; 0 = connected. */
         int grace;
         int hits;
         int thimbles;
@@ -66,12 +66,12 @@ final class Arena {
     private boolean enabled;
     private final List<Material> palette = new ArrayList<>();
 
-    // --- partie en cours ---
+    // --- current game ---
     private State state = State.WAITING;
     private final Map<UUID, Seat> seats = new LinkedHashMap<>();
     private final Map<UUID, PlayerSnapshot> spectators = new LinkedHashMap<>();
     private final List<UUID> order = new ArrayList<>();
-    /** Joueurs elimines, dans l'ordre : lu a l'envers, c'est le classement. */
+    /** Eliminated players, in order: read backwards, it is the ranking. */
     private final List<UUID> eliminated = new ArrayList<>();
     private final Map<Block, BlockData> changed = new LinkedHashMap<>();
     private UUID jumper;
@@ -108,7 +108,7 @@ final class Arena {
         return maxPlayers;
     }
 
-    /** Les joueurs qui voient la partie : participants connectes et spectateurs. */
+    /** The players who see the game: connected participants and spectators. */
     private List<Player> viewers() {
         List<Player> viewers = new ArrayList<>();
         for (UUID uuid : seats.keySet()) {
@@ -131,10 +131,10 @@ final class Arena {
     }
 
     // ------------------------------------------------------------------
-    //  Entree / sortie
+    //  Join / leave
     // ------------------------------------------------------------------
 
-    /** @return la cle du message d'erreur, ou null si le joueur a bien rejoint. */
+    /** @return the error message key, or null if the player joined. */
     String join(Player player) {
         if (!enabled) {
             return "arena.disabled";
@@ -156,10 +156,10 @@ final class Arena {
     }
 
     /**
-     * Partie solo : on remplit la piscine tout seul, sans decompte ni adversaire.
-     * Elle se termine a court de vies, ou en victoire si la piscine est entierement remplie.
+      * Solo game: the player fills the pool alone, with no countdown and no opponent.
+      * It ends when out of lives, or in victory if the pool is completely filled.
      *
-     * @return la cle du message d'erreur, ou null si la partie a demarre.
+      * @return the error message key, or null if the game started.
      */
     String startSolo(Player player) {
         if (!enabled) {
@@ -176,7 +176,7 @@ final class Arena {
         return null;
     }
 
-    /** @return la cle du message d'erreur, ou null si le joueur observe desormais la partie. */
+    /** @return the error message key, or null if the player is now watching the game. */
     String spectate(Player player) {
         if (!enabled) {
             return "arena.disabled";
@@ -242,8 +242,8 @@ final class Arena {
     }
 
     /**
-     * Deconnexion en pleine partie : la place est gardee pendant le delai de grace.
-     * L'inventaire est rendu tout de suite (l'evenement de deconnexion precede la sauvegarde).
+      * Disconnection mid-game: the seat is kept during the grace period.
+      * The inventory is returned right away (the quit event comes before the save).
      */
     void disconnect(Player player) {
         UUID uuid = player.getUniqueId();
@@ -266,7 +266,7 @@ final class Arena {
         }
     }
 
-    /** @return true si le joueur a repris sa place. */
+    /** @return true if the player took their seat back. */
     boolean reconnect(Player player) {
         Seat seat = seats.get(player.getUniqueId());
         if (seat == null || seat.grace <= 0) {
@@ -281,7 +281,7 @@ final class Arena {
         return true;
     }
 
-    /** Arret propre : tout le monde est restaure, la piscine aussi. */
+    /** Clean stop: everyone is restored, the pool too. */
     void shutdown() {
         viewers().forEach(player -> plugin.hud().clear(player));
         for (UUID uuid : new ArrayList<>(seats.keySet())) {
@@ -305,7 +305,7 @@ final class Arena {
         resetGame();
     }
 
-    /** Remet la piscine et l'etat de partie a zero, sans toucher aux joueurs. */
+    /** Resets the pool and the game state, without touching the players. */
     private void resetGame() {
         restorePool();
         order.clear();
@@ -318,7 +318,7 @@ final class Arena {
         state = State.WAITING;
     }
 
-    /** Remet tout le monde au lobby d'attente pour une nouvelle partie, sans quitter l'arene. */
+    /** Sends everyone back to the waiting lobby for a new game, without leaving the arena. */
     private void requeue() {
         resetGame();
         for (UUID uuid : new ArrayList<>(seats.keySet())) {
@@ -335,8 +335,8 @@ final class Arena {
             seat.thimbles = 0;
             prepare(player, GameMode.ADVENTURE, wait);
         }
-        // Un spectateur arrive en cours de partie entre vraiment en jeu a la manche suivante,
-        // sinon il resterait spectateur indefiniment.
+        // A spectator who arrived mid-game really joins at the next round,
+        // otherwise they would stay a spectator forever.
         for (UUID uuid : new ArrayList<>(spectators.keySet())) {
             Player player = Bukkit.getPlayer(uuid);
             if (player == null || seats.size() >= maxPlayers) {
@@ -358,10 +358,10 @@ final class Arena {
     }
 
     /**
-     * Demarre sans attendre. Accepte aussi l'etat STARTING : c'est justement quand un decompte
-     * tourne qu'un administrateur veut le court-circuiter.
+      * Starts without waiting. Also accepts the STARTING state: it is precisely while a countdown
+      * runs that an administrator wants to skip it.
      *
-     * @return false si l'arene est vide ou si une partie est deja en cours.
+      * @return false if the arena is empty or a game is already running.
      */
     boolean forceStart() {
         if (seats.isEmpty() || (state != State.WAITING && state != State.STARTING)) {
@@ -372,7 +372,7 @@ final class Arena {
     }
 
     // ------------------------------------------------------------------
-    //  Boucle de jeu
+    //  Game loop
     // ------------------------------------------------------------------
 
     void tick() {
@@ -414,8 +414,8 @@ final class Arena {
             case PLAYING -> tickTurn();
             case ENDING -> {
                 if (--ticks <= 0) {
-                    // Les joueurs restent sur place pour la partie suivante : sans ca, il faut
-                    // retaper /th join a chaque manche. Le solo, lui, rend la main.
+                    // Players stay put for the next game: otherwise they would have to
+                    // type /th join again every round. Solo, however, hands control back.
                     if (solo || seats.isEmpty()) {
                         shutdown();
                     } else {
@@ -433,8 +433,8 @@ final class Arena {
     private void tickTurn() {
         tickGrace();
         if (state != State.PLAYING) {
-            // tickGrace() a pu terminer la partie : sans ce retour, le tour continuait
-            // et pouvait encore poser un bloc.
+            // tickGrace() may have ended the game: without this return, the turn went on
+            // and could still place a block.
             return;
         }
         if (pending != null) {
@@ -471,8 +471,8 @@ final class Arena {
                 Seat seat = seats.get(jumper);
                 plugin.hud().trail(player.getLocation(), seat == null ? null : seat.block, viewers());
             }
-            // La resolution est faite ici, et non sur PlayerMoveEvent : un joueur qui atterrit
-            // sur un bloc et reste immobile n'emet plus aucun mouvement.
+            // Resolved here, not on PlayerMoveEvent: a player who lands
+            // on a block and stands still no longer emits any movement.
             if (checkLanding(player)) {
                 return;
             }
@@ -490,13 +490,13 @@ final class Arena {
         }
     }
 
-    /** Met la partie en pause avant d'enchainer, pour laisser voir ce qui vient de se passer. */
+    /** Pauses the game before moving on, to let everyone see what just happened. */
     private void pause(int ticksToWait, Runnable action) {
         pauseTicks = ticksToWait;
         pending = action;
     }
 
-    /** Decompte du delai de grace des joueurs deconnectes. */
+    /** Grace period countdown for disconnected players. */
     private void tickGrace() {
         for (UUID uuid : new ArrayList<>(seats.keySet())) {
             Seat seat = seats.get(uuid);
@@ -585,11 +585,11 @@ final class Arena {
         plugin.hud().sound(List.of(player), Sound.BLOCK_NOTE_BLOCK_PLING, 1.4f);
     }
 
-    /** @return true si le saut vient d'etre resolu. */
+    /** @return true if the jump was just resolved. */
     private boolean checkLanding(Player player) {
         Location location = player.getLocation();
         if (!falling) {
-            // Le saut ne commence que lorsque le joueur a vraiment quitte le plongeoir.
+            // The jump only starts once the player has really left the diving board.
             if (location.getY() > jump.getY() - 1.0) {
                 return false;
             }
@@ -598,8 +598,8 @@ final class Arena {
         int x = location.getBlockX();
         int y = location.getBlockY();
         int z = location.getBlockZ();
-        // Fenetre de detection d'au moins 4 blocs : un joueur tombe vite, et les deux coins
-        // peuvent avoir ete poses au meme niveau (piscine "plate" du point de vue de la region).
+        // Detection window of at least 4 blocks: a player falls fast, and both corners
+        // may have been set at the same level (a "flat" pool from the region's point of view).
         if (inPool(x, z) && y <= surfaceY() && y >= Math.min(floorY(), surfaceY() - 3)) {
             Block target = world().getBlockAt(x, surfaceY(), z);
             if (target.getType() == Material.WATER) {
@@ -616,9 +616,9 @@ final class Arena {
     }
 
     /**
-     * Atterrissage sur un bloc, teste sous les quatre coins de la hitbox : un joueur pose sur le
-     * bord d'un bloc a un centre qui surplombe la colonne voisine, et le raté passait inapercu.
-     * {@code Player#isOnGround()} n'est pas une option, il est renseigne par le client.
+      * Landing on a block, tested under the four corners of the hitbox: a player standing on the
+      * edge of a block has a center above the next column, and the miss went unnoticed.
+      * {@code Player#isOnGround()} is not an option, it is filled in by the client.
      */
     private boolean onGround(Player player) {
         BoundingBox box = player.getBoundingBox();
@@ -634,7 +634,7 @@ final class Arena {
         return false;
     }
 
-    /** Joueur immobilise : sur le plongeoir avant son saut, ou en vol au-dessus de la piscine. */
+    /** Frozen player: on the diving board before their jump, or in the air above the pool. */
     boolean frozen(Player player) {
         UUID uuid = player.getUniqueId();
         return (freeze > 0 && uuid.equals(jumper)) || uuid.equals(bonusPicker);
@@ -662,15 +662,15 @@ final class Arena {
             plugin.hud().title(player, "title.hit", null);
             plugin.hud().sound(List.of(player), Sound.ENTITY_PLAYER_SPLASH, 1f);
         }
-        // Le joueur reste un instant dans l'eau : on voit ou il est tombe avant qu'il disparaisse.
+        // The player stays in the water for a moment: you see where they fell before they vanish.
         pause(plugin.splashPauseSeconds() * 20, () -> endTurn(player));
     }
 
     /**
-     * Bonus du de a coudre : le joueur choisit une case d'eau supplementaire en visant puis
-     * en faisant un clic droit. Sans choix a temps, une case est tiree au sort.
+      * Thimble bonus: the player picks an extra water block by aiming, then
+      * right clicking. Without a choice in time, a block is picked at random.
      *
-     * @return true si la partie attend le choix du joueur.
+      * @return true if the game is waiting for the player's choice.
      */
     private boolean askBonus(Player player, Seat seat) {
         if (plugin.bonusSelectSeconds() <= 0 || waterLeft() == 0) {
@@ -681,7 +681,7 @@ final class Arena {
         bonusTicks = plugin.bonusSelectSeconds() * 20;
         player.getInventory().setItem(0, new ItemStack(seat.block));
         player.getInventory().setHeldItemSlot(0);
-        // Vue plongeante sur la piscine, immobile : seul le regard bouge (voir frozen()).
+        // Top-down view of the pool, frozen: only the gaze moves (see frozen()).
         player.setAllowFlight(true);
         player.setFlying(true);
         player.teleport(abovePool());
@@ -689,7 +689,7 @@ final class Arena {
         return true;
     }
 
-    /** Point de vue au-dessus du centre de la piscine, regard vers le bas. */
+    /** Viewpoint above the center of the pool, looking down. */
     private Location abovePool() {
         double x = (Math.min(corner1.getBlockX(), corner2.getBlockX())
                 + Math.max(corner1.getBlockX(), corner2.getBlockX())) / 2.0 + 0.5;
@@ -700,7 +700,7 @@ final class Arena {
         return view;
     }
 
-    /** Clic droit du joueur qui doit choisir sa case bonus. */
+    /** Right click of the player who must pick their bonus block. */
     void handleBonusClick(Player player) {
         if (bonusPicker == null || !bonusPicker.equals(player.getUniqueId())) {
             return;
@@ -713,8 +713,8 @@ final class Arena {
         if (target.getType() == Material.WATER) {
             fillBonus(target, player, false);
         } else if (changed.containsKey(target)) {
-            // Sabotage : rouvrir une case bouchee pendant la partie. Seuls les blocs poses par
-            // le jeu sont concernes, le fond et les bords de la piscine restent intouchables.
+            // Sabotage: reopen a block filled during the game. Only blocks placed by
+            // the game count, the floor and the edges of the pool stay untouchable.
             target.setBlockData(changed.remove(target), false);
             clearBonus(player);
             broadcast("game.bonus-open", "player", player.getName());
@@ -734,7 +734,7 @@ final class Arena {
         clearBonus(player);
     }
 
-    /** Fin du choix bonus : le joueur redescend de sa vue plongeante. */
+    /** End of the bonus choice: the player comes down from the top-down view. */
     private void clearBonus(Player player) {
         bonusPicker = null;
         bonusTicks = 0;
@@ -745,7 +745,7 @@ final class Arena {
         }
     }
 
-    /** Fin de tour : retour aux gradins, puis joueur suivant. Un seul endroit qui enchaine. */
+    /** End of turn: back to the stands, then next player. A single place chains turns. */
     private void endTurn(Player player) {
         if (player != null) {
             park(player);
@@ -789,8 +789,8 @@ final class Arena {
         state = State.ENDING;
         jumper = null;
         ticks = plugin.endDelaySeconds() * 20;
-        // Classement de fin : les survivants, puis les elimines du dernier au premier. Plusieurs
-        // survivants (piscine pleine sans remise a neuf) : pas de vainqueur, comme promis en config.
+        // Final ranking: the survivors, then the eliminated from last to first. Several
+        // survivors (full pool without refill): no winner, as promised in the config.
         List<UUID> ranking = new ArrayList<>();
         for (UUID uuid : order) {
             Seat seat = seats.get(uuid);
@@ -820,7 +820,7 @@ final class Arena {
         recordStats(ranking, winner);
     }
 
-    /** Stats persistantes : solo (retour anticipe) et forcestop (shutdown direct) sont hors d'ici. */
+    /** Persistent stats: solo (early return) and forcestop (direct shutdown) are out of here. */
     private void recordStats(List<UUID> ranking, UUID winner) {
         List<Leaderboard.ResultLine> lines = new ArrayList<>();
         for (UUID uuid : ranking) {
@@ -829,8 +829,8 @@ final class Arena {
                 lines.add(new Leaderboard.ResultLine(uuid, nameOf(uuid), seat.hits, seat.thimbles));
             }
         }
-        // Un seul classe = les adversaires sont partis : compter la victoire la rendrait gratuite
-        // a quiconque joue avec un second compte.
+        // Only one ranked = the opponents left: counting the win would hand it for free
+        // to anyone playing with a second account.
         if (lines.size() >= 2) {
             plugin.leaderboard().record(id, winner, lines);
         }
@@ -854,15 +854,15 @@ final class Arena {
         }
     }
 
-    /** Bilan d'une partie solo : cases remplies et des a coudre reussis. */
+    /** Summary of a solo game: blocks filled and thimbles hit. */
     private void endSolo() {
         UUID uuid = order.isEmpty() ? null : order.get(0);
         Seat seat = uuid == null ? null : seats.get(uuid);
         if (seat == null) {
             return;
         }
-        // Parfait = la piscine est pleine et le joueur tient encore : une partie interrompue
-        // (deconnexion, arret force) ne doit pas etre annoncee comme un sans-faute.
+        // Perfect = the pool is full and the player is still alive: an interrupted game
+        // (disconnection, forced stop) must not be announced as flawless.
         boolean perfect = seat.alive && waterLeft() == 0;
         broadcast(perfect ? "game.solo-perfect" : "game.solo-over",
                 "player", nameOf(uuid),
@@ -883,7 +883,7 @@ final class Arena {
         return name != null ? name : "?";
     }
 
-    /** Tableau de score et barre d'action, rafraichis une fois par seconde. */
+    /** Scoreboard and action bar, refreshed once per second. */
     private void refreshHud() {
         List<Player> viewers = viewers();
         if (viewers.isEmpty()) {
@@ -923,14 +923,14 @@ final class Arena {
         refreshActionBar(viewers, water);
     }
 
-    /** La consigne du moment : elle remplace les rappels que le chat repetait a chaque tour. */
+    /** The current instruction: it replaces the reminders the chat repeated every turn. */
     private void refreshActionBar(List<Player> viewers, int water) {
         if (state != State.PLAYING) {
             plugin.hud().actionBar(viewers, "actionbar.waiting",
                     "players", String.valueOf(seats.size()), "max", String.valueOf(maxPlayers));
             return;
         }
-        // Les spectateurs lisent tous la meme phrase : elle n'est composee qu'une fois.
+        // Spectators all read the same sentence: it is built only once.
         List<Player> watchers = new ArrayList<>(viewers.size());
         for (Player player : viewers) {
             UUID uuid = player.getUniqueId();
@@ -948,7 +948,7 @@ final class Arena {
                 "player", jumper == null ? "-" : nameOf(jumper), "water", String.valueOf(water));
     }
 
-    /** Nombre de cases de la surface de jeu, remplies ou non. */
+    /** Number of blocks of the playing surface, filled or not. */
     private int poolSize() {
         if (!hasPool()) {
             return 0;
@@ -963,7 +963,7 @@ final class Arena {
         player.teleport(spectator != null ? spectator : wait);
     }
 
-    /** En solo la partie continue tant que le joueur est en vie ; a plusieurs, jusqu'au dernier. */
+    /** In solo the game goes on while the player is alive; with several, until the last one. */
     private boolean gameOver() {
         return aliveCount() <= (solo ? 0 : 1);
     }
@@ -972,14 +972,14 @@ final class Arena {
         return (int) seats.values().stream().filter(seat -> seat.alive).count();
     }
 
-    /** Les lignes de jeu vont au chat sans prefixe : dans l'arene, personne n'en a besoin. */
+    /** Game lines go to the chat without prefix: inside the arena, nobody needs it. */
     private void broadcast(String key, String... placeholders) {
         Component line = plugin.message(key, placeholders);
         viewers().forEach(player -> player.sendMessage(line));
     }
 
     // ------------------------------------------------------------------
-    //  Piscine
+    //  Pool
     // ------------------------------------------------------------------
 
     private World world() {
@@ -1005,10 +1005,10 @@ final class Arena {
     }
 
     /**
-     * Un joueur en attente de son tour ne doit pas tomber dans la piscine. Le sauteur et le joueur
-     * qui choisit sa case bonus y ont droit ; un elimine (siege mort) ou un spectateur, non concernes.
-     * ponytail: bloque toute la colonne (x,z) de la piscine, pas une bande verticale ; suffisant tant
-     * qu'aucune arene n'a de passerelle au-dessus de l'eau.
+      * A player waiting for their turn must not fall into the pool. The jumper and the player
+      * picking their bonus block may; an eliminated player (dead seat) or a spectator, not concerned.
+      * ponytail: blocks the whole (x,z) column of the pool, not a vertical band; enough as long
+      * as no arena has a walkway above the water.
      */
     boolean forbidsPool(Player player, Location to) {
         if (state != State.PLAYING || !hasPool()) {
@@ -1022,7 +1022,7 @@ final class Arena {
         return inPool(to.getBlockX(), to.getBlockZ());
     }
 
-    /** Vrai si les 4 cases voisines sont deja remplies (ou hors piscine) : un trou de 1x1. */
+    /** True if the 4 neighbouring blocks are already filled (or outside the pool): a 1x1 hole. */
     private boolean isolated(int x, int z) {
         return !isWater(x + 1, z) && !isWater(x - 1, z) && !isWater(x, z + 1) && !isWater(x, z - 1);
     }
@@ -1031,7 +1031,7 @@ final class Arena {
         return inPool(x, z) && world().getBlockAt(x, surfaceY(), z).getType() == Material.WATER;
     }
 
-    /** Les cases encore en eau a la surface de la piscine. */
+    /** The blocks still filled with water at the pool surface. */
     private List<Block> waterBlocks() {
         List<Block> water = new ArrayList<>();
         if (!hasPool()) {
@@ -1063,8 +1063,8 @@ final class Arena {
     }
 
     /**
-     * Remet la piscine en eau. Sans journal en memoire — apres un redemarrage ou un crash —
-     * la surface est repeinte a partir de la geometrie, sinon l'arene resterait bouchee.
+      * Refills the pool with water. Without a journal in memory (after a restart or a crash)
+      * the surface is repainted from the geometry, otherwise the arena would stay filled.
      */
     void restorePool() {
         if (!changed.isEmpty()) {
@@ -1094,7 +1094,7 @@ final class Arena {
     //  Configuration
     // ------------------------------------------------------------------
 
-    /** @return la liste des elements manquants, vide si l'arene est prete. */
+    /** @return the list of missing items, empty if the arena is ready. */
     List<String> missing() {
         List<String> missing = new ArrayList<>();
         if (wait == null) {
@@ -1107,9 +1107,10 @@ final class Arena {
             missing.add("setspectator");
         }
         if (!hasPool()) {
-            missing.add("pos1/pos2 (meme monde)");
+            // Command names, not sentences: the list stays readable in every language.
+            missing.add("pos1/pos2");
         } else if (waterLeft() == 0) {
-            missing.add("de l'eau a Y=" + surfaceY());
+            missing.add("setsurface (Y=" + surfaceY() + ")");
         }
         return missing;
     }
@@ -1136,7 +1137,7 @@ final class Arena {
         surface = y;
     }
 
-    /** @return false si la cle est inconnue. */
+    /** @return false if the key is unknown. */
     boolean setValue(String key, int value) {
         switch (key) {
             case "min" -> minPlayers = Math.max(2, value);
@@ -1199,8 +1200,8 @@ final class Arena {
                 palette.add(material);
             }
         }
-        // Un fichier edite a la main peut declarer une arene active mais incomplete :
-        // elle planterait au premier /th join.
+        // A hand-edited file can declare an arena enabled but incomplete:
+        // it would crash on the first /th join.
         enabled = section.getBoolean("enabled") && missing().isEmpty();
     }
 }

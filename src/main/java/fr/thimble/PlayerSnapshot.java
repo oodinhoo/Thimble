@@ -13,9 +13,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 
 /**
- * Etat d'un joueur avant qu'il entre en partie, restaure a sa sortie.
- * Ecrit aussi sur disque des la capture : Minecraft sauvegarde les joueurs toutes les cinq
- * minutes, donc sans cela un crash en pleine partie graverait l'inventaire vide.
+  * A player's state before they join a game, restored when they leave.
+  * Also written to disk on capture: Minecraft saves players every five
+  * minutes, so without it a crash mid-game would persist the empty inventory.
  */
 record PlayerSnapshot(Location location, GameMode gameMode, ItemStack[] inventory, int level, float exp,
         int foodLevel, float saturation, boolean allowFlight, boolean flying, boolean invulnerable,

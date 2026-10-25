@@ -34,6 +34,8 @@ import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 
 public final class ThimblePlugin extends JavaPlugin {
 
+    static final List<String> LANGUAGES = List.of("fr", "en");
+
     private final Map<String, Arena> arenas = new LinkedHashMap<>();
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final Hud hud = new Hud(this);
@@ -48,7 +50,11 @@ public final class ThimblePlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        saveResource("messages.yml", false);
+        for (String language : LANGUAGES) {
+            if (!new File(getDataFolder(), messagesFile(language)).exists()) {
+                saveResource(messagesFile(language), false);
+            }
+        }
         arenasFile = new File(getDataFolder(), "arenas.yml");
         pendingFile = new File(getDataFolder(), "pending-restore.yml");
         pending = YamlConfiguration.loadConfiguration(pendingFile);
@@ -60,13 +66,13 @@ public final class ThimblePlugin extends JavaPlugin {
         getServer().getScheduler().runTaskTimer(this, this::tickArenas, 1L, 1L);
     }
 
-    /** Une arene qui leve arreterait les suivantes, vingt fois par seconde : on l'isole. */
+    /** An arena that throws would stop the next ones, twenty times a second: isolate it. */
     private void tickArenas() {
         for (Arena arena : arenas.values()) {
             try {
                 arena.tick();
             } catch (RuntimeException e) {
-                getLogger().severe("Arene " + arena.id() + " desactivee apres une erreur : " + e);
+                getLogger().severe("Arena " + arena.id() + " disabled after an error: " + e);
                 arena.setEnabled(false);
                 saveArenas();
             }
@@ -79,7 +85,7 @@ public final class ThimblePlugin extends JavaPlugin {
     }
 
     // ------------------------------------------------------------------
-    //  Arenes
+    //  Arenas
     // ------------------------------------------------------------------
 
     void reload() {
@@ -87,18 +93,7 @@ public final class ThimblePlugin extends JavaPlugin {
         arenas.clear();
         setups.clear();
         reloadConfig();
-        messages = YamlConfiguration.loadConfiguration(new File(getDataFolder(), "messages.yml"));
-        // Les textes du jar servent de repli : une mise a jour qui ajoute des messages n'oblige
-        // pas a supprimer le fichier existant, et les personnalisations sont conservees.
-        try (InputStream bundled = getResource("messages.yml")) {
-            if (bundled != null) {
-                messages.setDefaults(YamlConfiguration.loadConfiguration(
-                        new InputStreamReader(bundled, StandardCharsets.UTF_8)));
-            }
-        } catch (IOException e) {
-            getLogger().warning("Messages par defaut illisibles : " + e.getMessage());
-        }
-        prefix = miniMessage.deserialize(messages.getString("prefix", ""));
+        loadMessages();
         YamlConfiguration stored = YamlConfiguration.loadConfiguration(arenasFile);
         for (String id : stored.getKeys(false)) {
             ConfigurationSection section = stored.getConfigurationSection(id);
@@ -108,8 +103,42 @@ public final class ThimblePlugin extends JavaPlugin {
                 arenas.put(id, arena);
             }
         }
-        // Apres les messages : le rendu du tableau les utilise des le chargement.
+        // After the messages: rendering the board uses them as soon as it loads.
         leaderboard.load();
+    }
+
+    /** French keeps the historical name, so already customized files are not lost. */
+    static String messagesFile(String language) {
+        return language.equals("fr") ? "messages.yml" : "messages_" + language + ".yml";
+    }
+
+    private void loadMessages() {
+        String language = getConfig().getString("language", "en").toLowerCase(Locale.ROOT);
+        if (!LANGUAGES.contains(language)) {
+            getLogger().warning("Unknown language: " + language + ", falling back to en.");
+            language = "en";
+        }
+        String file = messagesFile(language);
+        messages = YamlConfiguration.loadConfiguration(new File(getDataFolder(), file));
+        // The jar's texts are the fallback: an update that adds messages does not require
+        // deleting the existing file, and customizations are kept.
+        try (InputStream bundled = getResource(file)) {
+            if (bundled != null) {
+                messages.setDefaults(YamlConfiguration.loadConfiguration(
+                        new InputStreamReader(bundled, StandardCharsets.UTF_8)));
+            }
+        } catch (IOException e) {
+            getLogger().warning("Could not read the default messages: " + e.getMessage());
+        }
+        prefix = miniMessage.deserialize(messages.getString("prefix", ""));
+    }
+
+    /** Switches the language without stopping games: only texts and the board are reloaded. */
+    void setLanguage(String language) {
+        getConfig().set("language", language);
+        saveConfig();
+        loadMessages();
+        leaderboard.refresh();
     }
 
     void saveArenas() {
@@ -118,18 +147,18 @@ public final class ThimblePlugin extends JavaPlugin {
         try {
             stored.save(arenasFile);
         } catch (IOException e) {
-            getLogger().severe("Impossible d'enregistrer arenas.yml : " + e.getMessage());
+            getLogger().severe("Could not save arenas.yml: " + e.getMessage());
         }
     }
 
     // ------------------------------------------------------------------
-    //  Restaurations en attente
+    //  Pending restorations
     // ------------------------------------------------------------------
 
     /**
-     * L'etat d'un joueur est ecrit sur disque des son entree en arene. Si le serveur tombe
-     * pendant la partie, sa sauvegarde vanilla contient un inventaire vide : c'est ce fichier
-     * qui le lui rend a sa prochaine connexion.
+      * A player's state is written to disk as soon as they enter an arena. If the server goes down
+      * during the game, its vanilla save holds an empty inventory: this file is what
+      * gives it back on their next login.
      */
     void remember(Player player, PlayerSnapshot snapshot) {
         snapshot.save(pending.createSection(player.getUniqueId().toString()));
@@ -143,7 +172,7 @@ public final class ThimblePlugin extends JavaPlugin {
         }
     }
 
-    /** @return true si le joueur avait un etat en attente, desormais rendu. */
+    /** @return true if the player had a pending state, now given back. */
     boolean restorePending(Player player) {
         ConfigurationSection section = pending.getConfigurationSection(player.getUniqueId().toString());
         if (section == null) {
@@ -151,18 +180,18 @@ public final class ThimblePlugin extends JavaPlugin {
         }
         PlayerSnapshot.load(section).restore(player);
         forget(player.getUniqueId());
-        getLogger().info("Etat de " + player.getName() + " restaure apres une partie interrompue.");
+        getLogger().info("Restored the state of " + player.getName() + " after an interrupted game.");
         return true;
     }
 
-    // ponytail: un seul fichier reecrit en entier a chaque entree et sortie, donc O(joueurs en
-    // arene) par ecriture. Invisible en dessous d'une dizaine de joueurs simultanes ; passer a un
-    // fichier par joueur le jour ou plusieurs arenes tournent pleines en meme temps.
+    // ponytail: a single file rewritten in full on every join and leave, so O(players in
+    // arenas) per write. Invisible below a dozen simultaneous players; move to one
+    // file per player the day several arenas run full at the same time.
     private void savePending() {
         try {
             pending.save(pendingFile);
         } catch (IOException e) {
-            getLogger().severe("Impossible d'enregistrer pending-restore.yml : " + e.getMessage());
+            getLogger().severe("Could not save pending-restore.yml: " + e.getMessage());
         }
     }
 
@@ -170,7 +199,7 @@ public final class ThimblePlugin extends JavaPlugin {
         return arenas.get(id.toLowerCase(Locale.ROOT));
     }
 
-    /** Bukkit lit le point comme un separateur de chemin : un tel identifiant imbriquerait la section. */
+    /** Bukkit reads the dot as a path separator: such an id would nest the section. */
     static boolean validId(String id) {
         return id.matches("[a-z0-9_-]{1,32}");
     }
@@ -194,8 +223,8 @@ public final class ThimblePlugin extends JavaPlugin {
     }
 
     /**
-     * L'arene ou se trouve ce joueur, ou null. Indexe plutot que parcouru : appele a chaque
-     * paquet de mouvement de chaque joueur connecte, y compris ceux qui ne jouent pas.
+      * The arena this player is in, or null. Indexed rather than scanned: called on every
+      * movement packet of every connected player, including those not playing.
      */
     Arena arenaOf(Player player) {
         return byPlayer.get(player.getUniqueId());
@@ -210,7 +239,7 @@ public final class ThimblePlugin extends JavaPlugin {
         setups.remove(uuid);
     }
 
-    /** L'arene libre la plus remplie. */
+    /** The most filled free arena. */
     Arena bestFreeArena() {
         return arenas.values().stream()
                 .filter(Arena::joinable)
@@ -218,7 +247,7 @@ public final class ThimblePlugin extends JavaPlugin {
                 .orElse(null);
     }
 
-    /** Une arene activee, libre et sans joueur : de quoi lancer une partie solo. */
+    /** An enabled arena, free and empty: enough to start a solo game. */
     Arena freeEmptyArena() {
         return arenas.values().stream()
                 .filter(arena -> arena.joinable() && arena.playerCount() == 0)
@@ -234,12 +263,12 @@ public final class ThimblePlugin extends JavaPlugin {
         return getConfig().getInt("game.countdown-seconds", 15);
     }
 
-    /** Temps passe dans l'eau apres un saut reussi, avant le retour aux gradins. */
+    /** Time spent in the water after a successful jump, before going back to the stands. */
     int splashPauseSeconds() {
         return getConfig().getInt("game.splash-pause-seconds", 2);
     }
 
-    /** Hauteur du point de vue au-dessus de la piscine pour choisir la case bonus. */
+    /** Height of the viewpoint above the pool to pick the bonus block. */
     int bonusViewHeight() {
         return getConfig().getInt("game.bonus-view-height", 12);
     }
@@ -272,7 +301,7 @@ public final class ThimblePlugin extends JavaPlugin {
         return getConfig().getBoolean("game.wait-as-spectator", true);
     }
 
-    /** Element d'habillage active ? (titles, sounds, bossbar, scoreboard, particles) */
+    /** Presentation element enabled? (titles, sounds, bossbar, scoreboard, particles) */
     boolean ui(String element) {
         return getConfig().getBoolean("ui." + element, true);
     }
@@ -286,10 +315,10 @@ public final class ThimblePlugin extends JavaPlugin {
     }
 
     // ------------------------------------------------------------------
-    //  Baguette de configuration
+    //  Setup wand
     // ------------------------------------------------------------------
 
-    /** Une configuration d'arene en cours : l'arene visee et l'etape suivante. */
+    /** An arena setup in progress: the target arena and the next step. */
     private record Setup(String arena, int step) { }
 
     private static final List<String> SETUP_STEPS = List.of("pos1", "pos2", "setjump", "gradins");
@@ -297,8 +326,8 @@ public final class ThimblePlugin extends JavaPlugin {
     private final Map<UUID, Setup> setups = new HashMap<>();
 
     /**
-     * Le bloc vise par le joueur, fluides compris : l'eau n'etant pas solide, le client
-     * n'envoie jamais de clic dessus, c'est au serveur de la trouver.
+      * The block the player is aiming at, fluids included: water not being solid, the client
+      * never sends a click on it, the server has to find it.
      */
     static Block targetBlock(Player player) {
         RayTraceResult trace = player.getWorld().rayTraceBlocks(player.getEyeLocation(),
@@ -315,7 +344,7 @@ public final class ThimblePlugin extends JavaPlugin {
         send(player, "setup.step-" + SETUP_STEPS.get(0));
     }
 
-    /** @return true si le clic droit a servi a configurer une arene. */
+    /** @return true if the right click was used to set up an arena. */
     boolean handleWandClick(Player player) {
         Setup setup = setups.get(player.getUniqueId());
         if (setup == null || player.getInventory().getItemInMainHand().getType() != Material.BLAZE_ROD) {
@@ -333,7 +362,7 @@ public final class ThimblePlugin extends JavaPlugin {
         switch (step) {
             case "pos1", "pos2" -> arena.setLocation(step, target.getLocation());
             case "setjump" -> arena.setLocation("setjump", spot);
-            // Les gradins servent a la fois de lobby d'attente et de point de retour.
+            // The stands are both the waiting lobby and the return point.
             case "gradins" -> {
                 arena.setLocation("setwait", spot);
                 arena.setLocation("setspectator", spot);
@@ -378,12 +407,12 @@ public final class ThimblePlugin extends JavaPlugin {
     //  Messages
     // ------------------------------------------------------------------
 
-    /** @param placeholders paires cle/valeur : "player", "Alex", "lives", "2"... */
+    /** @param placeholders key/value pairs: "player", "Alex", "lives", "2"... */
     Component message(String key, String... placeholders) {
         return messageResolved(key, resolvers(placeholders));
     }
 
-    /** Paires cle/valeur en balises MiniMessage, sans interpretation de la valeur. */
+    /** Key/value pairs as MiniMessage tags, the value not interpreted. */
     static TagResolver[] resolvers(String... placeholders) {
         TagResolver[] resolvers = new TagResolver[placeholders.length / 2];
         for (int i = 0; i + 1 < placeholders.length; i += 2) {
@@ -397,7 +426,12 @@ public final class ThimblePlugin extends JavaPlugin {
         return raw == null ? Component.text(key) : miniMessage.deserialize(raw, TagResolver.resolver(resolvers));
     }
 
-    /** Le libelle colore d'un etat d'arene, injectable via &lt;state&gt;. */
+    /** The raw text of a key, to insert as is in another message (argument names...). */
+    String text(String key) {
+        return messages.getString(key, key);
+    }
+
+    /** The colored label of an arena state, injectable through &lt;state&gt;. */
     TagResolver stateTag(Arena arena) {
         return Placeholder.component("state", messageResolved("state." + arena.state().name()));
     }
@@ -407,9 +441,9 @@ public final class ThimblePlugin extends JavaPlugin {
     }
 
     /**
-     * Clic sur une pancarte, en bascule : deja en partie, le joueur la quitte (comme {@code /th
-     * leave}) ; sinon il rejoint, comme {@code /th join} — arene nommee en seconde ligne, sinon
-     * l'arene libre la plus remplie.
+      * Click on a sign, as a toggle: already in a game, the player leaves it (like {@code /th
+      * leave}); otherwise they join, like {@code /th join}: arena named on the second line, otherwise
+      * the most filled free arena.
      */
     void signClick(Player player, String arenaId) {
         Arena current = arenaOf(player);
@@ -417,7 +451,7 @@ public final class ThimblePlugin extends JavaPlugin {
             current.leave(player, true);
             return;
         }
-        // La pancarte est une autre porte d'entree que /th join : memes droits.
+        // The sign is another way in than /th join: same permissions.
         if (!player.hasPermission("thimble.play")) {
             send(player, "general.no-permission");
             return;

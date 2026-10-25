@@ -8,7 +8,9 @@ player alive wins.
 
 ![A game of Thimble: jumps, misses, a thimble bonus and the last player standing](docs/thimble.gif)
 
-In-game texts are in French; every one of them can be changed in `messages.yml`.
+In-game texts are in English by default, or French: set `language` in `config.yml`, or run
+`/th admin lang <fr|en>` in game. Every text can be changed in `messages.yml` (French) and
+`messages_en.yml` (English).
 
 ## Building
 
@@ -196,7 +198,8 @@ counting.
 | `/th admin restore <arena>` | Refills the pool with water. Works even after a restart, when the plugin has lost track of placed blocks. |
 | `/th admin forcestart <arena>` | Starts without waiting: skips the running countdown, or starts the game before `min` players are in. Refuses if the arena is empty or already playing. |
 | `/th admin forcestop <arena>` | Stops the game and sends everyone back to where they started. |
-| `/th admin reload` | Reloads `config.yml`, `messages.yml` and `arenas.yml`. **Stops running games**: avoid it while the server is busy. |
+| `/th admin lang <fr\|en>` | Switches every text to French or English and saves the choice in `config.yml`. Running games keep going; their scoreboard title changes at the next game. |
+| `/th admin reload` | Reloads `config.yml`, the messages file and `arenas.yml`. **Stops running games**: avoid it while the server is busy. |
 
 **Leaderboard** — these two commands take no arena: there is one panel per server.
 
@@ -220,9 +223,12 @@ Replace the jar in `plugins/` then **restart** the server. Neither `config.yml`,
 existing file fall back to those in the jar. To see the new commented options, delete the file
 concerned and it will be regenerated in full.
 
-One exception since this version: the waiting screen now shows `players/max` instead of
+Since 0.2.0, the waiting screen now shows `players/max` instead of
 `players/min`. If you have a customized `messages.yml`, replace `<min>` with `<max>` in
 `scoreboard.waiting` and `actionbar.waiting` — otherwise these lines would show a literal `<min>`.
+
+Since 0.3.0, texts default to English. To keep French, run `/th admin lang fr` once (or add
+`language: fr` to `config.yml`); a customized `messages.yml` is still the French file and is kept.
 
 ## Documentation
 

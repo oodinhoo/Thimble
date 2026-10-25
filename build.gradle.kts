@@ -3,11 +3,11 @@ plugins {
 }
 
 group = "fr.thimble"
-version = "0.2.0"
+version = "0.3.0"
 
 java {
     toolchain {
-        // Minecraft 26.1 et suivants exigent Java 25.
+        // Minecraft 26.1 and later require Java 25.
         languageVersion.set(JavaLanguageVersion.of(25))
     }
 }
@@ -19,7 +19,7 @@ repositories {
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:26.2.build.112-stable")
-    // La logique d'affichage se teste sans serveur : l'API suffit sur le classpath de test.
+    // The display logic is tested without a server: the API on the test classpath is enough.
     testImplementation("io.papermc.paper:paper-api:26.2.build.112-stable")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

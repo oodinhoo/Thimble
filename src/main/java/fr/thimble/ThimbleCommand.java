@@ -21,7 +21,7 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
     private static final List<String> PLAYER_SUBS = List.of("join", "solo", "spectate", "leave", "list", "help");
     private static final List<String> ADMIN_SUBS = List.of("create", "delete", "setwait", "setjump",
             "setspectator", "pos1", "pos2", "setsurface", "set", "palette", "enable", "disable",
-            "info", "restore", "forcestart", "forcestop", "wand", "setboard", "clearboard", "reload");
+            "info", "restore", "forcestart", "forcestop", "wand", "setboard", "clearboard", "lang", "reload");
     private static final List<String> VALUE_KEYS = List.of("min", "max", "lives", "timeout");
 
     private final ThimblePlugin plugin;
@@ -54,7 +54,7 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
     }
 
     // ------------------------------------------------------------------
-    //  Joueur
+    //  Player
     // ------------------------------------------------------------------
 
     private void join(CommandSender sender, String[] args) {
@@ -85,7 +85,7 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
             return;
         }
         if (args.length < 2) {
-            plugin.send(player, "general.usage", "usage", "/th spectate <arene>");
+            plugin.send(player, "general.usage", "usage", "/th spectate " + plugin.text("args.arena"));
             return;
         }
         Arena arena = arenaArgument(player, args, () -> null);
@@ -94,7 +94,7 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
         }
     }
 
-    /** @return le joueur, s'il en est un et qu'il n'est pas deja dans une arene. */
+    /** @return the player, if there is one and they are not already in an arena. */
     private Player idlePlayer(CommandSender sender) {
         if (!(sender instanceof Player player)) {
             plugin.send(sender, "general.player-only");
@@ -107,7 +107,7 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
         return player;
     }
 
-    /** L'arene nommee en argument, sinon celle que propose le repli. Signale l'echec. */
+    /** The arena named as argument, otherwise the one the fallback offers. Reports failure. */
     private Arena arenaArgument(Player player, String[] args, Supplier<Arena> fallback) {
         Arena arena = args.length > 1 ? plugin.arena(args[1]) : fallback.get();
         if (arena == null) {
@@ -179,6 +179,17 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
             plugin.send(sender, "general.reloaded");
             return;
         }
+        if (sub.equals("lang")) {
+            String language = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "";
+            if (!ThimblePlugin.LANGUAGES.contains(language)) {
+                plugin.send(sender, "general.usage", "usage",
+                        "/th admin lang <" + String.join("|", ThimblePlugin.LANGUAGES) + ">");
+                return;
+            }
+            plugin.setLanguage(language);
+            plugin.send(sender, "general.language-set", "language", language);
+            return;
+        }
         if (sub.equals("setboard")) {
             if (sender instanceof Player player) {
                 plugin.leaderboard().setBoard(player.getLocation());
@@ -194,7 +205,7 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
             return;
         }
         if (args.length < 2) {
-            plugin.send(sender, "general.usage", "usage", "/th admin " + sub + " <arene>");
+            plugin.send(sender, "general.usage", "usage", "/th admin " + sub + " " + plugin.text("args.arena"));
             return;
         }
         String id = args[1].toLowerCase(Locale.ROOT);
@@ -298,7 +309,8 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
     }
 
     private void setValue(CommandSender sender, Arena arena, String[] args) {
-        String usage = "/th admin set <arene> <min|max|lives|timeout> <valeur>";
+        String usage = "/th admin set " + plugin.text("args.arena") + " <min|max|lives|timeout> "
+                + plugin.text("args.value");
         if (args.length < 4) {
             plugin.send(sender, "general.usage", "usage", usage);
             return;
@@ -322,7 +334,8 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
             case "clear" -> arena.palette().clear();
             case "add", "remove" -> {
                 if (args.length < 4) {
-                    plugin.send(sender, "general.usage", "usage", "/th admin palette <arene> " + action + " <bloc>");
+                    plugin.send(sender, "general.usage", "usage", "/th admin palette " + plugin.text("args.arena")
+                            + " " + action + " " + plugin.text("args.block"));
                     return;
                 }
                 Material material = Material.matchMaterial(args[3]);
@@ -373,7 +386,7 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
 
     private String paletteNames(Arena arena) {
         return arena.palette().isEmpty()
-                ? "(defaut)"
+                ? plugin.text("arena.palette-default")
                 : String.join(", ", arena.palette().stream().map(Material::name).toList());
     }
 
@@ -404,7 +417,13 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
         } else if (args[0].equalsIgnoreCase("admin") && sender.hasPermission("thimble.admin")) {
             switch (args.length) {
                 case 2 -> options.addAll(ADMIN_SUBS);
-                case 3 -> plugin.arenas().forEach(arena -> options.add(arena.id()));
+                case 3 -> {
+                    if (args[1].equalsIgnoreCase("lang")) {
+                        options.addAll(ThimblePlugin.LANGUAGES);
+                    } else {
+                        plugin.arenas().forEach(arena -> options.add(arena.id()));
+                    }
+                }
                 case 4 -> {
                     if (args[1].equalsIgnoreCase("set")) {
                         options.addAll(VALUE_KEYS);

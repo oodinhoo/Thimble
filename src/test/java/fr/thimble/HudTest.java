@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Test;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 /**
- * La logique d'affichage est la seule qui tourne sans serveur : elle ne touche ni au monde,
- * ni aux joueurs. Ce test attrape les erreurs de comptage, qui ne se voient qu'en jeu.
+  * The display logic is the only one that runs without a server: it touches neither the world
+  * nor the players. This test catches counting errors, which only show in game.
  */
 class HudTest {
 
@@ -18,25 +18,25 @@ class HudTest {
     }
 
     @Test
-    void coeursPleinsEtEteints() {
+    void fullAndDimmedHearts() {
         assertEquals("♥♥♥".replace('♥', '\u2764'), plain(Hud.hearts(3, 3)));
-        assertEquals("♥♥♥".replace('♥', '\u2764'), plain(Hud.hearts(1, 3)), "un coeur perdu reste affiche, eteint");
+        assertEquals("♥♥♥".replace('♥', '\u2764'), plain(Hud.hearts(1, 3)), "a lost heart stays shown, dimmed");
         assertEquals("", plain(Hud.hearts(0, 0)));
     }
 
     @Test
-    void jaugeToujoursEnDixCrans() {
+    void gaugeAlwaysHasTenSteps() {
         assertEquals(10, plain(Hud.gauge(27, 49)).length());
         assertEquals(10, plain(Hud.gauge(0, 49)).length());
         assertEquals(10, plain(Hud.gauge(49, 49)).length());
-        assertEquals(10, plain(Hud.gauge(1, 0)).length(), "une piscine vide de cases ne doit pas casser la jauge");
+        assertEquals(10, plain(Hud.gauge(1, 0)).length(), "a pool without blocks must not break the gauge");
     }
 
     @Test
-    void carreDeCouleurReconnaitLesBlocsTeints() {
+    void colorSquareRecognizesDyedBlocks() {
         assertEquals("\u25a0", plain(Hud.square(Material.RED_WOOL)));
         assertEquals("\u25a0", plain(Hud.square(Material.LIGHT_BLUE_CONCRETE)));
-        assertEquals("\u25a0", plain(Hud.square(Material.STONE)), "un bloc non teint reste affichable");
+        assertEquals("\u25a0", plain(Hud.square(Material.STONE)), "an undyed block can still be shown");
         assertEquals("\u25a0", plain(Hud.square(null)));
     }
 }

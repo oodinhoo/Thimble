@@ -22,17 +22,17 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
 
 /**
- * Classement persistant du serveur et resultat de la derniere partie, affiches sur un
- * {@link TextDisplay} pose dans le monde. Seules les parties multijoueur terminees normalement
- * comptent : le solo est de l'entrainement, et un forcestop passe par {@code shutdown()} sans
- * jamais atteindre {@code end()}, donc hors de ce qui est enregistre ici.
+  * Persistent server leaderboard and result of the last game, shown on a
+  * {@link TextDisplay} placed in the world. Only multiplayer games that ended normally
+  * count: solo is practice, and a forcestop goes through {@code shutdown()} without
+  * ever reaching {@code end()}, so outside of what is recorded here.
  */
 final class Leaderboard {
 
-    /** Marque l'entite du tableau, pour la retrouver et tuer les doublons apres un reload. */
+    /** Tags the board entity, to find it and kill duplicates after a reload. */
     private static final String TAG = "thimble_board";
 
-    /** Stats cumulees d'un joueur. Champs mutables : tout passe par {@link #record}. */
+    /** Cumulative stats of a player. Mutable fields: everything goes through {@link #record}. */
     static final class Stats {
         final UUID uuid;
         String name;
@@ -47,7 +47,7 @@ final class Leaderboard {
         }
     }
 
-    /** Une ligne du podium de la derniere partie, telle que l'arene la fournit. */
+    /** A line of the last game's podium, as the arena provides it. */
     record ResultLine(UUID uuid, String name, int hits, int thimbles) { }
 
     private final ThimblePlugin plugin;
@@ -56,7 +56,7 @@ final class Leaderboard {
     private Location board;
     private String lastArena;
     private String lastWinner;
-    // "nom|cases|des" pre-decoupe : le podium de la derniere partie, au plus trois lignes.
+    // "name|hits|thimbles" pre-split: the last game's podium, three lines at most.
     private List<String> lastTop = new ArrayList<>();
 
     Leaderboard(ThimblePlugin plugin) {
@@ -118,11 +118,11 @@ final class Leaderboard {
         try {
             yml.save(file);
         } catch (IOException e) {
-            plugin.getLogger().severe("Impossible d'enregistrer stats.yml : " + e.getMessage());
+            plugin.getLogger().severe("Could not save stats.yml: " + e.getMessage());
         }
     }
 
-    /** Fin d'une partie multi : incremente les stats, retient le podium, reecrit et rafraichit. */
+    /** End of a multiplayer game: increments the stats, keeps the podium, rewrites and refreshes. */
     void record(String arena, UUID winner, List<ResultLine> lines) {
         for (ResultLine line : lines) {
             Stats s = stats.computeIfAbsent(line.uuid(), u -> new Stats(u, line.name()));
@@ -154,7 +154,7 @@ final class Leaderboard {
         return "?";
     }
 
-    /** Tri pur, testable sans serveur : victoires decroissantes, puis des a coudre. */
+    /** Pure sort, testable without a server: wins descending, then thimbles. */
     static List<Stats> top(Collection<Stats> all, int size) {
         return all.stream()
                 .sorted(Comparator.comparingInt((Stats s) -> s.wins)
@@ -164,7 +164,7 @@ final class Leaderboard {
     }
 
     // ------------------------------------------------------------------
-    //  Entite d'affichage
+    //  Display entity
     // ------------------------------------------------------------------
 
     void setBoard(Location location) {
@@ -184,7 +184,7 @@ final class Leaderboard {
         return board != null;
     }
 
-    /** Supprime toute entite de tableau dans les mondes charges : reload, crash ou deplacement. */
+    /** Removes every board entity in the loaded worlds: reload, crash or move. */
     private void clearDisplays() {
         for (World w : Bukkit.getWorlds()) {
             for (TextDisplay d : w.getEntitiesByClass(TextDisplay.class)) {
@@ -195,17 +195,17 @@ final class Leaderboard {
         }
     }
 
-    /** (Re)affiche le tableau. Appele a l'activation et en fin de partie, jamais au tick. */
+    /** (Re)displays the board. Called on enable and at the end of a game, never on tick. */
     void refresh() {
         if (board == null || board.getWorld() == null) {
             return;
         }
         if (!plugin.ui("leaderboard")) {
-            clearDisplays(); // l'entite est persistante : sans ca, elle resterait figee dans le monde
+            clearDisplays(); // the entity is persistent: without this, it would stay frozen in the world
             return;
         }
-        // ponytail: force le chargement du chunk du tableau. Un seul chunk de lobby garde charge,
-        // c'est justement la que les joueurs lisent le classement ; a revoir si ca pose un cout.
+        // ponytail: forces the board's chunk to load. A single lobby chunk kept loaded,
+        // precisely where players read the leaderboard; revisit if it turns out to cost.
         board.getChunk().load();
         display().text(render());
     }
@@ -220,7 +220,7 @@ final class Leaderboard {
             if (found == null) {
                 found = d;
             } else {
-                d.remove(); // doublons apres un reload ou un crash
+                d.remove(); // duplicates after a reload or a crash
             }
         }
         if (found == null) {
