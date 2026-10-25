@@ -1,40 +1,40 @@
 # ---------------------------------------------------------------------------
-#  Thimble - mini-jeu du "de a coudre"
-#  Durees en secondes sauf mention contraire.
+#  Thimble - the "thimble" minigame (de a coudre)
+#  Durations in seconds unless stated otherwise.
 # ---------------------------------------------------------------------------
 
-# Langue des textes : en (messages_en.yml) ou fr (messages.yml). Modifiable en jeu avec
-# /th admin lang <fr|en>, sans arreter les parties.
+# Text language: en (messages_en.yml) or fr (messages.yml). Can be changed in game with
+# /th admin lang <fr|en>, without stopping games.
 language: en
 
 game:
-  # Decompte avant le demarrage, une fois le minimum de joueurs atteint.
+  # Countdown before the start, once the minimum number of players is reached.
   countdown-seconds: 15
-  # Decompte raccourci lorsque l'arene est pleine.
+  # Shortened countdown when the arena is full.
   countdown-full-seconds: 5
-  # Delai entre la fin de la partie et le retour au point de depart.
+  # Delay between the end of the game and the return to the starting point.
   end-delay-seconds: 8
-  # Immobilisation sur le plongeoir avant que le joueur puisse sauter.
+  # Freeze on the diving board before the player can jump.
   freeze-seconds: 1
-  # Temps passe dans l'eau apres un saut reussi, avant le retour aux gradins.
+  # Time spent in the water after a successful jump, before going back to the stands.
   splash-pause-seconds: 2
-  # Hauteur du point de vue au-dessus de la piscine pour choisir la case bonus.
+  # Height of the viewpoint above the pool to pick the bonus block.
   bonus-view-height: 12
-  # Temps laisse au joueur pour choisir sa case bonus apres un de a coudre.
-  # 0 = la case supplementaire est tiree au sort immediatement.
+  # Time given to the player to pick their bonus block after a thimble.
+  # 0 = the extra block is picked at random right away.
   bonus-select-seconds: 8
-  # Delai pendant lequel la place d'un joueur deconnecte est gardee. 0 = pas de reprise.
+  # How long a disconnected player's seat is kept. 0 = no rejoin.
   rejoin-grace-seconds: 60
-  # Un joueur qui rejoint une partie deja lancee la regarde au lieu d'etre refuse.
+  # A player joining a game already running watches it instead of being refused.
   wait-as-spectator: true
 
-# Comportement lorsqu'il ne reste plus aucune case d'eau :
-#   true  = la piscine est remise a neuf et la partie continue
-#   false = la partie s'arrete sans vainqueur
+# Behaviour when not a single water block is left:
+#   true  = the pool is refilled and the game goes on
+#   false = the game stops with no winner
 refill-when-full: true
 
-# Blocs de couleur attribues aux joueurs, dans l'ordre.
-# Chaque arene peut definir sa propre palette (/th admin palette).
+# Colored blocks assigned to players, in order.
+# Each arena can define its own palette (/th admin palette).
 default-palette:
   - RED_WOOL
   - BLUE_WOOL
@@ -45,12 +45,12 @@ default-palette:
   - LIGHT_BLUE_WOOL
   - BLACK_WOOL
 
-# Classement persistant du serveur, affiche sur un panneau flottant (/th admin setboard).
+# Persistent server leaderboard, shown on a floating panel (/th admin setboard).
 leaderboard:
-  # Nombre de joueurs affiches dans le TOP.
+  # Number of players shown in the TOP.
   size: 10
 
-# Habillage. Passer une entree a false la desactive entierement.
+# Presentation. Setting an entry to false turns it off entirely.
 ui:
   titles: true
   actionbar: true
@@ -58,9 +58,9 @@ ui:
   bossbar: true
   scoreboard: true
   particles: true
-  # Le panneau flottant du classement. Les stats continuent d'etre comptees si false,
-  # seul l'affichage disparait.
+  # The floating leaderboard panel. Stats are still counted if false,
+  # only the display goes away.
   leaderboard: true
-  # Couleur du joueur sur la barre de localisation (le "radar") et de son nom, assortie a
-  # son bloc. Passe par une equipe de scoreboard, seul levier serveur disponible.
+  # Player color on the locator bar (the "radar") and on their name, matching
+  # their block. Goes through a scoreboard team, the only server-side lever available.
   radar: true

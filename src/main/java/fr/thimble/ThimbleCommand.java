@@ -54,7 +54,7 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
     }
 
     // ------------------------------------------------------------------
-    //  Joueur
+    //  Player
     // ------------------------------------------------------------------
 
     private void join(CommandSender sender, String[] args) {
@@ -94,7 +94,7 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
         }
     }
 
-    /** @return le joueur, s'il en est un et qu'il n'est pas deja dans une arene. */
+    /** @return the player, if there is one and they are not already in an arena. */
     private Player idlePlayer(CommandSender sender) {
         if (!(sender instanceof Player player)) {
             plugin.send(sender, "general.player-only");
@@ -107,7 +107,7 @@ final class ThimbleCommand implements CommandExecutor, TabCompleter {
         return player;
     }
 
-    /** L'arene nommee en argument, sinon celle que propose le repli. Signale l'echec. */
+    /** The arena named as argument, otherwise the one the fallback offers. Reports failure. */
     private Arena arenaArgument(Player player, String[] args, Supplier<Arena> fallback) {
         Arena arena = args.length > 1 ? plugin.arena(args[1]) : fallback.get();
         if (arena == null) {

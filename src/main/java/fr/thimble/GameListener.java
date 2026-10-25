@@ -43,9 +43,9 @@ final class GameListener implements Listener {
         Location from = event.getFrom();
         Location to = event.getTo();
         if (from.getX() == to.getX() && from.getY() == to.getY() && from.getZ() == to.getZ()) {
-            return; // simple rotation : rien a bloquer
+            return; // plain rotation: nothing to block
         }
-        // Gel sur le plongeoir, ou joueur en attente qui tenterait d'entrer dans la piscine.
+        // Frozen on the diving board, or a waiting player trying to enter the pool.
         if (arena.frozen(event.getPlayer()) || arena.forbidsPool(event.getPlayer(), to)) {
             Location blocked = from.clone();
             blocked.setYaw(to.getYaw());
@@ -54,7 +54,7 @@ final class GameListener implements Listener {
         }
     }
 
-    /** Personne ne meurt : les vies sont gerees par le plugin. */
+    /** Nobody dies: lives are handled by the plugin. */
     @EventHandler
     public void onDamage(EntityDamageEvent event) {
         if (event.getEntity() instanceof Player player && plugin.arenaOf(player) != null) {
@@ -70,7 +70,7 @@ final class GameListener implements Listener {
         }
     }
 
-    /** Retour d'un joueur : on lui rend d'abord ce qu'une partie interrompue lui devait. */
+    /** A player comes back: first give back what an interrupted game owed them. */
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         plugin.restorePending(event.getPlayer());
@@ -82,9 +82,9 @@ final class GameListener implements Listener {
     }
 
     /**
-     * Baguette de configuration et choix de la case bonus : on vise, on clique droit.
-     * Un seul clic droit declenche deux evenements, un par main : sans ce filtre, chaque clic
-     * compterait double.
+      * Setup wand and bonus block choice: aim, then right click.
+      * A single right click fires two events, one per hand: without this filter, every click
+      * would count twice.
      */
     @EventHandler
     public void onInteract(PlayerInteractEvent event) {
@@ -98,7 +98,7 @@ final class GameListener implements Listener {
                 && event.getClickedBlock().getState() instanceof Sign sign) {
             String first = plain(sign.getSide(Side.FRONT).line(0));
             if (first.equalsIgnoreCase("[thimble]")) {
-                event.setCancelled(true); // avant tout : empeche l'ouverture de l'editeur de pancarte
+                event.setCancelled(true); // first of all: prevents the sign editor from opening
                 plugin.signClick(event.getPlayer(), plain(sign.getSide(Side.FRONT).line(1)));
                 return;
             }

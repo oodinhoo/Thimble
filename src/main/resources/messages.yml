@@ -1,6 +1,6 @@
 # ---------------------------------------------------------------------------
-#  Messages du plugin, au format MiniMessage (https://docs.advntr.dev/minimessage/)
-#  Les <balises> entre chevrons sont remplacees par le plugin.
+#  Plugin messages, in MiniMessage format (https://docs.advntr.dev/minimessage/)
+#  <tags> between angle brackets are replaced by the plugin.
 # ---------------------------------------------------------------------------
 prefix: "<gradient:#38bdf8:#818cf8><bold>De a coudre</bold></gradient> <dark_gray>|</dark_gray> "
 
@@ -12,7 +12,7 @@ general:
   reloaded: "<green>Configuration et arenes rechargees.</green>"
   language-set: "<green>Langue des textes : <white><language></white>.</green>"
 
-# Noms des arguments dans les messages d'usage, affiches tels quels.
+# Argument names in usage messages, shown as is.
 args:
   arena: "<arene>"
   value: "<valeur>"
@@ -92,7 +92,7 @@ board:
   set: "<green>Tableau du classement pose a ta position.</green>"
   cleared: "<yellow>Tableau du classement retire.</yellow>"
 
-# Texte du panneau flottant du classement (TextDisplay), lignes separees par le plugin.
+# Text of the floating leaderboard (TextDisplay), lines joined by the plugin.
 leaderboard:
   title: "<gradient:#38bdf8:#818cf8><bold>CLASSEMENT</bold></gradient>"
   empty: "<gray>Aucune partie jouee pour l'instant.</gray>"

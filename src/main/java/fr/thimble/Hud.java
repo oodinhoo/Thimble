@@ -30,8 +30,8 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.title.Title;
 
 /**
- * Habillage : titres, sons, barre de boss, tableau de score, particules.
- * Chaque element est desactivable dans config.yml (section {@code ui}).
+  * Presentation: titles, sounds, boss bar, scoreboard, particles.
+  * Each element can be turned off in config.yml ({@code ui} section).
  */
 final class Hud {
 
@@ -41,7 +41,7 @@ final class Hud {
     private final ThimblePlugin plugin;
     private final Map<String, BossBar> bars = new HashMap<>();
     private final Map<String, Scoreboard> boards = new HashMap<>();
-    /** Tableau de score que le joueur avait avant d'entrer : un autre plugin peut l'utiliser. */
+    /** The scoreboard the player had before joining: another plugin may be using it. */
     private final Map<UUID, Scoreboard> previousBoards = new HashMap<>();
 
     Hud(ThimblePlugin plugin) {
@@ -60,7 +60,7 @@ final class Hud {
         player.showTitle(Title.title(plugin.messageResolved(key, resolvers), subtitle, TIMES));
     }
 
-    /** Consigne du moment, au-dessus de la barre d'objets. Reenvoyee chaque seconde, sinon elle s'efface. */
+    /** Current instruction, above the hotbar. Sent again every second, otherwise it fades. */
     void actionBar(Collection<Player> players, String key, String... placeholders) {
         if (!plugin.ui("actionbar")) {
             return;
@@ -69,7 +69,7 @@ final class Hud {
         players.forEach(player -> player.sendActionBar(text));
     }
 
-    /** La couleur Bukkit d'un bloc teinte (prefixe {@code RED_}, {@code BLUE_}...), blanc par defaut. */
+    /** The Bukkit color of a dyed block ({@code RED_}, {@code BLUE_}... prefix), white by default. */
     static Color dyeColor(Material block) {
         for (DyeColor dye : DyeColor.values()) {
             if (block != null && block.name().startsWith(dye.name() + "_")) {
@@ -79,13 +79,13 @@ final class Hud {
         return Color.WHITE;
     }
 
-    /** Le carre de couleur d'un joueur, deduit du bloc qui lui est attribue. */
+    /** A player's colored square, derived from the block assigned to them. */
     static Component square(Material block) {
         Color color = dyeColor(block);
         return Component.text("■", TextColor.color(color.getRed(), color.getGreen(), color.getBlue()));
     }
 
-    /** Les vies en coeurs : pleins pour ce qu'il reste, eteints pour ce qui est perdu. */
+    /** Lives as hearts: full for what is left, dimmed for what is lost. */
     static Component hearts(int remaining, int total) {
         Component full = Component.text("❤".repeat(Math.max(0, remaining)), NamedTextColor.RED);
         int lost = Math.max(0, total - remaining);
@@ -93,7 +93,7 @@ final class Hud {
                 : full.append(Component.text("❤".repeat(lost), NamedTextColor.DARK_GRAY));
     }
 
-    /** Jauge en dix crans, pour l'avancement du remplissage de la piscine. */
+    /** Ten-step gauge, for how far the pool is filled. */
     static Component gauge(int value, int max) {
         int filled = max <= 0 ? 0 : Math.round(10f * value / max);
         return Component.text("▓".repeat(filled), NamedTextColor.AQUA)
@@ -146,7 +146,7 @@ final class Hud {
         board.getEntries().forEach(board::resetScores);
         int score = lines.size();
         for (int i = 0; i < lines.size(); i++) {
-            // Les entrees doivent etre uniques : un "§r" invisible par ligne suffit.
+            // Entries must be unique: one invisible "§r" per line is enough.
             String entry = LegacyComponentSerializer.legacySection().serialize(lines.get(i)) + "§r".repeat(i);
             objective.getScore(entry).setScore(score--);
         }
@@ -157,10 +157,10 @@ final class Hud {
     }
 
     /**
-     * Place le joueur dans une equipe coloree a la teinte de son bloc, sur le tableau de l'arene.
-     * La couleur d'equipe teinte le point du joueur sur la barre de localisation (le « radar »)
-     * et son nom au-dessus de la tete : aucune API waypoint n'existe en Paper 26.2, l'equipe est
-     * le seul levier serveur, borne aux 16 couleurs nommees (d'ou {@link NamedTextColor#nearestTo}).
+      * Puts the player in a team colored like their block, on the arena scoreboard.
+      * The team color tints the player's dot on the locator bar (the "radar")
+      * and their name above their head: no waypoint API exists in Paper 26.2, the team is
+      * the only server-side lever, limited to the 16 named colors (hence {@link NamedTextColor#nearestTo}).
      */
     void colorPlayer(Arena arena, Player player, Material block) {
         if (!plugin.ui("radar")) {
@@ -171,7 +171,7 @@ final class Hud {
                 TextColor.color(rgb.getRed(), rgb.getGreen(), rgb.getBlue()));
         Scoreboard board = boards.computeIfAbsent(arena.id(),
                 id -> Bukkit.getScoreboardManager().getNewScoreboard());
-        String teamName = "th" + Integer.toHexString(named.value()); // une equipe par couleur, reutilisee
+        String teamName = "th" + Integer.toHexString(named.value()); // one team per color, reused
         Team team = board.getTeam(teamName);
         if (team == null) {
             team = board.registerNewTeam(teamName);
@@ -182,7 +182,7 @@ final class Hud {
         player.setScoreboard(board);
     }
 
-    /** Trainee de particules derriere le sauteur, a la couleur de son bloc. */
+    /** Particle trail behind the jumper, in the color of their block. */
     void trail(Location location, Material block, Collection<Player> viewers) {
         if (!plugin.ui("particles")) {
             return;
@@ -198,7 +198,7 @@ final class Hud {
         viewers.forEach(player -> player.spawnParticle(Particle.HAPPY_VILLAGER, location, 40, 0.6, 0.6, 0.6, 0));
     }
 
-    /** Rend au joueur son tableau de score et retire les barres du plugin. */
+    /** Gives the player their scoreboard back and removes the plugin's bars. */
     void clear(Player player) {
         bars.values().forEach(player::hideBossBar);
         Scoreboard previous = previousBoards.remove(player.getUniqueId());
