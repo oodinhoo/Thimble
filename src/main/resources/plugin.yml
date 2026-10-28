@@ -1,7 +1,7 @@
 name: Thimble
 version: '${version}'
 main: fr.thimble.ThimblePlugin
-api-version: '26.2'
+api-version: '26.3'
 description: Thimble minigame (de a coudre) - jump into the pool and place a block.
 authors: [ Odinho ]
 commands:

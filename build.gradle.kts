@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "fr.thimble"
-version = "0.3.0"
+version = "0.4.0"
 
 java {
     toolchain {
@@ -18,9 +18,9 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:26.2.build.112-stable")
+    compileOnly("io.papermc.paper:paper-api:26.3.build.227-stable")
     // The display logic is tested without a server: the API on the test classpath is enough.
-    testImplementation("io.papermc.paper:paper-api:26.2.build.112-stable")
+    testImplementation("io.papermc.paper:paper-api:26.3.build.227-stable")
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
@@ -34,7 +34,7 @@ tasks.test {
 
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
-    options.compilerArgs.add("-Xlint:deprecation")
+    options.compilerArgs.addAll(listOf("-Xlint:deprecation", "-Werror"))
 }
 
 tasks.processResources {

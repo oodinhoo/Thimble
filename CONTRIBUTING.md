@@ -20,7 +20,7 @@ Requires **JDK 25**.
 ```
 
 The build must pass with no compiler warning; it also runs the tests. Drop the jar from
-`build/libs/` into a **Paper 26.2** server to try your change.
+`build/libs/` into a **Paper 26.3** server to try your change.
 
 Only the logic that touches neither the world nor players is unit-tested (see
 [Tests](docs/SPECIFICATIONS.md#9-tests)): for anything else, say in the pull request how you
