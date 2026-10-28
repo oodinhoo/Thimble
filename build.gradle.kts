@@ -34,7 +34,7 @@ tasks.test {
 
 tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
-    options.compilerArgs.add("-Xlint:deprecation")
+    options.compilerArgs.addAll(listOf("-Xlint:deprecation", "-Werror"))
 }
 
 tasks.processResources {

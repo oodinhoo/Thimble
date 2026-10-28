@@ -21,10 +21,10 @@ Building from source requires **JDK 25** (mandatory since Minecraft 26.1).
 
 ```powershell
 $env:JAVA_HOME = "<path to a JDK 25>"
-.\gradlew.bat build      # -> build/libs/Thimble-0.2.0.jar
+.\gradlew.bat build      # -> build/libs/Thimble-0.4.0.jar
 ```
 
-Built against `io.papermc.paper:paper-api:26.3.build.227-stable` (Gradle 9.7.1, no warnings).
+Built against `io.papermc.paper:paper-api:26.3.build.227-stable` (Gradle 9.8.2, no warnings).
 `.\gradlew.bat test` runs the tests. Drop the jar into the `plugins/` folder of a **Paper 26.3**
 server.
 

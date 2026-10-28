@@ -67,7 +67,7 @@ game shows the plain summary.
 |---|---|
 | Server | **PaperMC 26.3**, `io.papermc.paper:paper-api:26.3.build.227-stable` (pinned version) |
 | Java | **JDK 25**, mandatory since Minecraft 26.1 |
-| Build | Gradle 9.7.1 + wrapper, JUnit 5 for tests |
+| Build | Gradle 9.8.2 + wrapper, JUnit 5 for tests |
 | Manifest | `plugin.yml`, `api-version: '26.3'` |
 | Text | Adventure / MiniMessage, no hard-coded `§` colors |
 | Commands | `CommandExecutor` + `TabCompleter` |
@@ -75,8 +75,11 @@ game shows the plain summary.
 **Bukkit is not deprecated**: `paper-api` *is* the extended Bukkit API, `org.bukkit.*` remains the
 main surface of Paper 26.3. Checked in the API jar's bytecode — neither `CommandExecutor`, nor
 `PluginCommand`, nor `JavaPlugin#getCommand`, nor the `commands:` section of `plugin.yml` carry the
-`Deprecated` attribute; only `JavaPluginLoader`, which no plugin calls, is marked. What is moving is
-*loading* (`paper-plugin.yml` and Brigadier), with no announced removal date.
+`Deprecated` attribute; only `JavaPluginLoader`, which no plugin calls, is marked. Since 26.3,
+the Bukkit command API (`CommandExecutor`, `TabCompleter`, `PluginCommand`, `JavaPlugin#getCommand`)
+is marked `@ApiStatus.Obsolete`: Paper points new code to Brigadier, but this is no deprecation, no
+compiler warning and no announced removal date. What is moving is *loading* (`paper-plugin.yml` and
+Brigadier).
 `JavaPlugin#registerCommand` would allow real Brigadier argument types without migrating the
 manifest: a single file to rework, the day it is worth it.
 
@@ -98,7 +101,7 @@ Thimble/
     │   ├── Leaderboard.java     # persistent leaderboard + last game, shown on a TextDisplay
     │   └── PlayerSnapshot.java  # player state, in memory and on disk
     ├── main/resources/          # plugin.yml, config.yml, messages.yml, messages_en.yml
-    └── test/java/fr/thimble/    # HudTest, ArenaConfigTest, LeaderboardTest
+    └── test/java/fr/thimble/    # HudTest, ArenaConfigTest, LeaderboardTest, MessagesTest
 ```
 
 ---
