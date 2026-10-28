@@ -159,7 +159,7 @@ final class Hud {
     /**
       * Puts the player in a team colored like their block, on the arena scoreboard.
       * The team color tints the player's dot on the locator bar (the "radar")
-      * and their name above their head: no waypoint API exists in Paper 26.2, the team is
+      * and their name above their head: no waypoint API exists in Paper 26.3, the team is
       * the only server-side lever, limited to the 16 named colors (hence {@link NamedTextColor#nearestTo}).
      */
     void colorPlayer(Arena arena, Player player, Material block) {

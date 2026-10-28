@@ -32,7 +32,9 @@ record PlayerSnapshot(Location location, GameMode gameMode, ItemStack[] inventor
                 player.getSaturation(),
                 player.getAllowFlight(),
                 player.isFlying(),
-                player.isInvulnerable(),
+                // The flag set by setInvulnerable, not isInvulnerable: since 26.3 that one also
+                // says true for a player in creative, who would come back invulnerable.
+                player.isMarkedInvulnerable(),
                 List.copyOf(player.getActivePotionEffects()));
     }
 

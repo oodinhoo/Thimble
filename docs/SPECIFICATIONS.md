@@ -1,6 +1,6 @@
 # Thimble — specification
 
-**PaperMC 26.2** plugin for the "thimble" mini-game (*dé à coudre*). This document describes the
+**PaperMC 26.3** plugin for the "thimble" mini-game (*dé à coudre*). This document describes the
 plugin as it is, and the decisions that cannot be read in the code. The change history is in git.
 
 ---
@@ -65,15 +65,15 @@ game shows the plain summary.
 
 | Element | Choice |
 |---|---|
-| Server | **PaperMC 26.2**, `io.papermc.paper:paper-api:26.2.build.112-stable` (pinned version) |
+| Server | **PaperMC 26.3**, `io.papermc.paper:paper-api:26.3.build.227-stable` (pinned version) |
 | Java | **JDK 25**, mandatory since Minecraft 26.1 |
 | Build | Gradle 9.7.1 + wrapper, JUnit 5 for tests |
-| Manifest | `plugin.yml`, `api-version: '26.2'` |
+| Manifest | `plugin.yml`, `api-version: '26.3'` |
 | Text | Adventure / MiniMessage, no hard-coded `§` colors |
 | Commands | `CommandExecutor` + `TabCompleter` |
 
 **Bukkit is not deprecated**: `paper-api` *is* the extended Bukkit API, `org.bukkit.*` remains the
-main surface of Paper 26.2. Checked in the API jar's bytecode — neither `CommandExecutor`, nor
+main surface of Paper 26.3. Checked in the API jar's bytecode — neither `CommandExecutor`, nor
 `PluginCommand`, nor `JavaPlugin#getCommand`, nor the `commands:` section of `plugin.yml` carry the
 `Deprecated` attribute; only `JavaPluginLoader`, which no plugin calls, is marked. What is moving is
 *loading* (`paper-plugin.yml` and Brigadier), with no announced removal date.
@@ -248,7 +248,7 @@ A player's color comes from `DyeColor`, recognized by the material prefix (`RED_
 `BLUE_CONCRETE`…): any dyed palette works without a table to maintain.
 
 That same color tints the player's dot on the **locator bar** (the "radar") and their name tag.
-Paper 26.2 exposes no waypoint API; the scoreboard team color is the only server-side lever, and the
+Paper 26.3 exposes no waypoint API; the scoreboard team color is the only server-side lever, and the
 game gives it priority over the default color derived from the UUID. It is limited to the sixteen
 named colors, hence the use of `NamedTextColor.nearestTo`. Can be turned off with `ui.radar`.
 
